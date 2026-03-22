@@ -1,13 +1,11 @@
 """
-Scriptorium — research intelligence for any subject.
-Professional UI with old money aesthetic, sidebar, search, filters & dark mode.
-Built by Ashlesha Sharma, Miranda House, Delhi University.
+Scriptorium — Research Intelligence Platform
+Professional AI chatbot for analyzing research papers with RAG technology.
 """
 
 import os, time, datetime, tempfile, base64
 import streamlit as st
 from dotenv import load_dotenv
-import plotly.graph_objects as go
 
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_community.document_loaders import PyPDFLoader
@@ -36,31 +34,6 @@ CHUNK_SIZE = 900
 CHUNK_OVERLAP = 180
 TOP_K = 4
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# COLOR PALETTES - OLD MONEY AESTHETIC
-# ═══════════════════════════════════════════════════════════════════════════════
-LIGHT_MODE = {
-    "cream": "#F5F1E8",
-    "burgundy": "#2C1810",
-    "gold": "#D4AF37",
-    "light_gold": "#E6C957",
-    "off_white": "#FEFAF0",
-    "shadow": "#1a1a1a",
-    "burgundy_light": "#3D2817",
-    "border": "#E0D5C5",
-}
-
-DARK_MODE = {
-    "cream": "#1A1410",          # Dark burgundy-tinted background
-    "burgundy": "#F5F1E8",       # Light text
-    "gold": "#D4AF37",           # Same gold
-    "light_gold": "#E6C957",     # Same light gold
-    "off_white": "#2A1F18",      # Darker cards
-    "shadow": "#0F0A08",         # Very dark
-    "burgundy_light": "#3D2817", # Slightly lighter burgundy
-    "border": "#4A3A2A",         # Dark border
-}
-
 st.set_page_config(
     page_title="Scriptorium",
     page_icon="📖",
@@ -69,17 +42,438 @@ st.set_page_config(
 )
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# PROFESSIONAL DARK THEME STYLING
+# ═══════════════════════════════════════════════════════════════════════════════
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600&family=Inter:wght@300;400;500&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body, [class*="css"] {
+    font-family: 'Inter', sans-serif !important;
+    background-color: #1a1a1a !important;
+    color: #e0e0e0 !important;
+}
+
+.stMainBlockContainer {
+    padding: 0 !important;
+    max-width: 100% !important;
+}
+
+#MainMenu, footer, header { 
+    visibility: hidden; 
+}
+
+/* ═════════════════════════════════════════ */
+/* SIDEBAR */
+/* ═════════════════════════════════════════ */
+section[data-testid="stSidebar"] {
+    background-color: #1f1f1f !important;
+    border-right: 1px solid #333 !important;
+}
+
+section[data-testid="stSidebar"] .block-container {
+    padding: 1.5rem 1rem !important;
+}
+
+.sidebar-logo {
+    font-family: 'Crimson Text', serif;
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #f5f5f5;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #333;
+}
+
+.sidebar-section-title {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #888;
+    margin: 1.5rem 0 0.8rem 0;
+}
+
+.sidebar-item {
+    background: #2a2a2a;
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding: 0.8rem 1rem;
+    margin-bottom: 0.6rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.85rem;
+}
+
+.sidebar-item:hover {
+    border-color: #555;
+    background: #333;
+}
+
+/* ═════════════════════════════════════════ */
+/* MAIN LAYOUT */
+/* ═════════════════════════════════════════ */
+.workspace-container {
+    display: flex;
+    height: 100vh;
+    background: #1a1a1a;
+    gap: 1px;
+}
+
+/* ═════════════════════════════════════════ */
+/* PDF PANE */
+/* ═════════════════════════════════════════ */
+.pdf-pane {
+    flex: 0 0 50%;
+    display: flex;
+    flex-direction: column;
+    background: #2a2a2a;
+    border-right: 1px solid #333;
+    overflow: hidden;
+}
+
+.pdf-header {
+    background: #1f1f1f;
+    color: #e0e0e0;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #333;
+    font-size: 0.85rem;
+}
+
+.pdf-header-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    color: #888;
+}
+
+.pdf-header-title {
+    font-family: 'Crimson Text', serif;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #f5f5f5;
+    margin-bottom: 0.4rem;
+}
+
+.pdf-viewer {
+    flex: 1;
+    overflow-y: auto;
+    background: #2a2a2a;
+}
+
+.pdf-viewer iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+/* ═════════════════════════════════════════ */
+/* Q&A PANE */
+/* ═════════════════════════════════════════ */
+.qa-pane {
+    flex: 0 0 50%;
+    display: flex;
+    flex-direction: column;
+    background: #1a1a1a;
+    overflow: hidden;
+}
+
+.qa-header {
+    background: #1f1f1f;
+    color: #e0e0e0;
+    padding: 1.5rem;
+    border-bottom: 1px solid #333;
+}
+
+.qa-header-title {
+    font-family: 'Crimson Text', serif;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #f5f5f5;
+    margin-bottom: 0.3rem;
+}
+
+.qa-header-meta {
+    font-size: 0.8rem;
+    color: #888;
+}
+
+.qa-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.message-group {
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.message-question {
+    color: #b0a89a;
+    font-size: 0.9rem;
+    margin-bottom: 0.8rem;
+}
+
+.message-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #d4af37;
+    margin-bottom: 0.4rem;
+    font-weight: 600;
+}
+
+.message-content {
+    color: #c9b7a8;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    margin-bottom: 0.6rem;
+}
+
+.key-points {
+    margin-top: 0.8rem;
+    padding-left: 1rem;
+}
+
+.key-point {
+    color: #b0a89a;
+    font-size: 0.9rem;
+    margin-bottom: 0.4rem;
+    line-height: 1.5;
+}
+
+.evidence-box {
+    background: rgba(212, 175, 55, 0.1);
+    border-left: 3px solid #d4af37;
+    padding: 0.8rem 1rem;
+    margin-top: 0.8rem;
+    border-radius: 4px;
+}
+
+.evidence-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #d4af37;
+    margin-bottom: 0.3rem;
+    font-weight: 600;
+}
+
+.evidence-text {
+    color: #c9b7a8;
+    font-size: 0.85rem;
+    font-style: italic;
+    line-height: 1.5;
+}
+
+/* ═════════════════════════════════════════ */
+/* INPUT SECTION */
+/* ═════════════════════════════════════════ */
+.qa-input-section {
+    padding: 1.5rem;
+    border-top: 1px solid #333;
+    background: #1f1f1f;
+}
+
+.suggested-prompts {
+    margin-bottom: 1rem;
+}
+
+.prompt-chip {
+    display: inline-block;
+    padding: 0.6rem 1rem;
+    background: #2a2a2a;
+    color: #b0a89a;
+    border: 1px solid #333;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.prompt-chip:hover {
+    background: #333;
+    border-color: #555;
+}
+
+.qa-input-box {
+    display: flex;
+    gap: 0.8rem;
+}
+
+.qa-input {
+    flex: 1;
+    padding: 0.9rem 1.2rem;
+    border: 1px solid #333;
+    border-radius: 6px;
+    font-family: 'Crimson Text', serif;
+    font-size: 0.95rem;
+    color: #e0e0e0;
+    background: #2a2a2a;
+}
+
+.qa-input:focus {
+    outline: none;
+    border-color: #555;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+}
+
+.qa-send-btn {
+    padding: 0.9rem 1.5rem;
+    background: #d4af37;
+    color: #1a1a1a;
+    border: none;
+    border-radius: 6px;
+    font-family: 'Crimson Text', serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.qa-send-btn:hover {
+    background: #e6c957;
+    transform: translateY(-1px);
+}
+
+/* ═════════════════════════════════════════ */
+/* LANDING PAGE */
+/* ═════════════════════════════════════════ */
+.landing-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #1a1a1a;
+    padding: 2rem;
+}
+
+.landing-box {
+    text-align: center;
+    max-width: 500px;
+}
+
+.landing-title {
+    font-family: 'Crimson Text', serif;
+    font-size: 2.5rem;
+    font-weight: 600;
+    color: #f5f5f5;
+    margin-bottom: 0.5rem;
+}
+
+.landing-subtitle {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+    color: #888;
+    margin-bottom: 2rem;
+}
+
+.upload-zone {
+    border: 2px dashed #333;
+    border-radius: 8px;
+    padding: 3rem 2rem;
+    background: #2a2a2a;
+    margin-bottom: 2rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.upload-zone:hover {
+    border-color: #555;
+    background: #333;
+}
+
+.upload-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.upload-text {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+    color: #b0a89a;
+}
+
+/* ═════════════════════════════════════════ */
+/* SCROLLBAR */
+/* ═════════════════════════════════════════ */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #2a2a2a;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #666;
+}
+
+/* ═════════════════════════════════════════ */
+/* STREAMLIT OVERRIDES */
+/* ═════════════════════════════════════════ */
+.stButton > button {
+    background-color: #2a2a2a !important;
+    border: 1px solid #333 !important;
+    color: #e0e0e0 !important;
+    border-radius: 6px !important;
+    transition: all 0.2s !important;
+}
+
+.stButton > button:hover {
+    background-color: #333 !important;
+    border-color: #555 !important;
+}
+
+.stTextInput > div > div > input {
+    background-color: #2a2a2a !important;
+    color: #e0e0e0 !important;
+    border: 1px solid #333 !important;
+}
+
+.stFileUploader {
+    background-color: #2a2a2a !important;
+    border: 1px dashed #333 !important;
+    border-radius: 8px !important;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+# ══════════════════════════════════════════��════════════════════════════════════
 # SESSION STATE
 # ═══════════════════════════════════════════════════════════════════════════════
-if "dark_mode" not in st.session_state:
-    st.session_state.dark_mode = False
-
-if "search_query" not in st.session_state:
-    st.session_state.search_query = ""
-
-if "filter_by_relevance" not in st.session_state:
-    st.session_state.filter_by_relevance = 0.0
-
 for k, v in {
     "answers": [],
     "chain": None,
@@ -90,565 +484,39 @@ for k, v in {
     "pending_q": None,
     "thinking": False,
     "last_q": None,
-    "documents": [],
 }.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# THEME SELECTOR
-# ═══════════════════════════════════════════════════════════════════════════════
-THEME = DARK_MODE if st.session_state.dark_mode else LIGHT_MODE
-
-# ══════���════════════════════════════════════════════════════════════════════════
-# COMPREHENSIVE STYLING WITH DARK MODE
-# ═══════════════════════════════════════════════════════════════════════════════
-st.markdown(f"""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;600&family=Crimson+Text:wght@400;600&family=Inter:wght@300;400;500&display=swap');
-
-* {{
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}}
-
-html, body, [class*="css"] {{
-    font-family: 'Crimson Text', 'Georgia', serif !important;
-    background-color: {THEME['cream']} !important;
-    color: {THEME['burgundy']} !important;
-}}
-
-.stMainBlockContainer {{
-    padding: 0 !important;
-    max-width: 100% !important;
-}}
-
-#MainMenu, footer, header {{ visibility: hidden; }}
-
-/* ═════════════════════════════════════════ */
-/* SIDEBAR STYLING */
-/* ═════════════════════════════════════════ */
-section[data-testid="stSidebar"] {{
-    background-color: {THEME['off_white']} !important;
-    border-right: 3px solid {THEME['gold']} !important;
-}}
-
-section[data-testid="stSidebar"] .block-container {{
-    padding: 1.5rem 1rem !important;
-}}
-
-.sidebar-header {{
-    font-family: 'Crimson Text', serif;
-    font-size: 1.3rem;
-    font-weight: 600;
-    color: {THEME['burgundy']};
-    margin-bottom: 1.5rem;
-    padding-bottom: 1rem;
-    border-bottom: 2px solid {THEME['light_gold']};
-}}
-
-.sidebar-section {{
-    margin-bottom: 1.8rem;
-}}
-
-.sidebar-section-title {{
-    font-family: 'Inter', sans-serif;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: {THEME['gold']};
-    margin-bottom: 0.8rem;
-}}
-
-.document-item {{
-    background: {THEME['cream']};
-    border: 1px solid {THEME['border']};
-    border-radius: 6px;
-    padding: 0.9rem;
-    margin-bottom: 0.6rem;
-    cursor: pointer;
-    transition: all 0.2s;
-}}
-
-.document-item:hover {{
-    border-color: {THEME['gold']};
-    box-shadow: 0 2px 8px rgba(212, 175, 55, 0.15);
-}}
-
-.document-item-name {{
-    font-family: 'Crimson Text', serif;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: {THEME['burgundy']};
-    margin-bottom: 0.3rem;
-}}
-
-.document-item-meta {{
-    font-family: 'Inter', sans-serif;
-    font-size: 0.7rem;
-    color: {THEME['gold']};
-}}
-
-/* ═════════════════════════════════════════ */
-/* TOP BRAND BAR */
-/* ═════════════════════════════════════════ */
-.brand-bar {{
-    background: linear-gradient(135deg, {THEME['burgundy']} 0%, {THEME['burgundy_light']} 100%);
-    color: {THEME['off_white']};
-    padding: 1.2rem 2rem;
-    border-bottom: 3px solid {THEME['gold']};
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}}
-
-.brand-left {{
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}}
-
-.brand-title {{
-    font-family: 'Crimson Text', serif;
-    font-size: 1.8rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-}}
-
-.brand-subtitle {{
-    font-family: 'Inter', sans-serif;
-    font-size: 0.7rem;
-    color: {THEME['light_gold']};
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    margin-top: 0.2rem;
-}}
-
-.brand-right {{
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-}}
-
-.search-box {{
-    background: rgba(255, 255, 255, 0.15);
-    border: 1px solid {THEME['light_gold']};
-    border-radius: 6px;
-    padding: 0.6rem 1rem;
-    color: {THEME['off_white']};
-    font-family: 'Crimson Text', serif;
-    font-size: 0.9rem;
-    width: 200px;
-}}
-
-.search-box:focus {{
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.3);
-}}
-
-.theme-toggle {{
-    background: rgba(255, 255, 255, 0.2);
-    border: 1px solid {THEME['light_gold']};
-    color: {THEME['off_white']};
-    padding: 0.6rem 1rem;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 1rem;
-    transition: all 0.2s;
-}}
-
-.theme-toggle:hover {{
-    background: rgba(212, 175, 55, 0.3);
-}}
-
-/* ═════════════════════════════════════════ */
-/* MAIN WORKSPACE */
-/* ═════════════════════════════════════════ */
-.workspace-container {{
-    display: flex;
-    height: calc(100vh - 80px);
-    gap: 2px;
-    background: {THEME['shadow']};
-}}
-
-.pdf-pane {{
-    flex: 0 0 48%;
-    display: flex;
-    flex-direction: column;
-    background: {THEME['off_white']};
-    border-right: 3px solid {THEME['gold']};
-    overflow: hidden;
-}}
-
-.pdf-header {{
-    background: linear-gradient(135deg, {THEME['burgundy_light']} 0%, {THEME['burgundy']} 100%);
-    color: {THEME['off_white']};
-    padding: 1.2rem 1.5rem;
-    border-bottom: 1px solid {THEME['gold']};
-}}
-
-.pdf-header-title {{
-    font-family: 'Crimson Text', serif;
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 0.4rem;
-}}
-
-.pdf-header-meta {{
-    font-family: 'Inter', sans-serif;
-    font-size: 0.75rem;
-    color: {THEME['light_gold']};
-}}
-
-.pdf-viewer {{
-    flex: 1;
-    overflow-y: auto;
-    padding: 0;
-}}
-
-.pdf-viewer iframe {{
-    width: 100%;
-    height: 100%;
-    border: none;
-}}
-
-/* ═════════════════════════════════════════ */
-/* Q&A PANE */
-/* ═════════════════════════════════════════ */
-.qa-pane {{
-    flex: 0 0 52%;
-    display: flex;
-    flex-direction: column;
-    background: {THEME['cream']};
-    overflow: hidden;
-}}
-
-.qa-header {{
-    background: linear-gradient(135deg, {THEME['burgundy']} 0%, {THEME['burgundy_light']} 100%);
-    color: {THEME['off_white']};
-    padding: 1.5rem;
-    border-bottom: 3px solid {THEME['gold']};
-}}
-
-.qa-header-title {{
-    font-family: 'Crimson Text', serif;
-    font-size: 1.3rem;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    margin-bottom: 0.5rem;
-}}
-
-.qa-header-meta {{
-    font-family: 'Inter', sans-serif;
-    font-size: 0.8rem;
-    color: {THEME['light_gold']};
-    opacity: 0.9;
-}}
-
-.qa-filters {{
-    padding: 1rem 1.5rem;
-    background: {THEME['off_white']};
-    border-bottom: 1px solid {THEME['border']};
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-}}
-
-.filter-label {{
-    font-family: 'Inter', sans-serif;
-    font-size: 0.8rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    color: {THEME['gold']};
-}}
-
-.qa-messages {{
-    flex: 1;
-    overflow-y: auto;
-    padding: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 1.2rem;
-}}
-
-.message {{
-    animation: slideIn 0.3s ease;
-}}
-
-@keyframes slideIn {{
-    from {{
-        opacity: 0;
-        transform: translateY(10px);
-    }}
-    to {{
-        opacity: 1;
-        transform: translateY(0);
-    }}
-}}
-
-.message-user {{
-    align-self: flex-end;
-    max-width: 85%;
-    background: {THEME['gold']};
-    color: {THEME['burgundy']};
-    padding: 1rem 1.2rem;
-    border-radius: 8px 8px 2px 8px;
-    box-shadow: 0 2px 6px rgba(212, 175, 55, 0.2);
-}}
-
-.message-user-text {{
-    font-family: 'Crimson Text', serif;
-    font-size: 1rem;
-    line-height: 1.6;
-}}
-
-.message-ai {{
-    align-self: flex-start;
-    max-width: 85%;
-    background: {THEME['off_white']};
-    color: {THEME['burgundy']};
-    padding: 1rem 1.2rem;
-    border-radius: 8px 8px 8px 2px;
-    border-left: 4px solid {THEME['gold']};
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-}}
-
-.message-ai-text {{
-    font-family: 'Crimson Text', serif;
-    font-size: 0.98rem;
-    line-height: 1.7;
-}}
-
-.message-time {{
-    font-family: 'Inter', sans-serif;
-    font-size: 0.65rem;
-    color: #999;
-    margin-top: 0.4rem;
-}}
-
-.message-evidence {{
-    font-family: 'Inter', sans-serif;
-    font-size: 0.8rem;
-    color: {THEME['gold']};
-    margin-top: 0.6rem;
-    padding-top: 0.6rem;
-    border-top: 1px solid {THEME['border']};
-}}
-
-/* ═════════════════════════════════════════ */
-/* INPUT SECTION */
-/* ═════════════════════════════════════════ */
-.qa-input-section {{
-    padding: 1.5rem;
-    border-top: 2px solid {THEME['light_gold']};
-    background: {THEME['off_white']};
-}}
-
-.suggested-prompts {{
-    display: flex;
-    gap: 0.6rem;
-    flex-wrap: wrap;
-    margin-bottom: 1rem;
-}}
-
-.prompt-chip {{
-    padding: 0.6rem 1rem;
-    background: {THEME['cream']};
-    color: {THEME['burgundy']};
-    border: 1px solid {THEME['gold']};
-    border-radius: 20px;
-    font-family: 'Inter', sans-serif;
-    font-size: 0.8rem;
-    cursor: pointer;
-    transition: all 0.2s;
-}}
-
-.prompt-chip:hover {{
-    background: {THEME['gold']};
-    color: {THEME['burgundy']};
-}}
-
-.qa-input-box {{
-    display: flex;
-    gap: 0.8rem;
-}}
-
-.qa-input {{
-    flex: 1;
-    padding: 0.9rem 1.2rem;
-    border: 2px solid {THEME['light_gold']};
-    border-radius: 6px;
-    font-family: 'Crimson Text', serif;
-    font-size: 0.95rem;
-    color: {THEME['burgundy']};
-    background: {THEME['cream']};
-}}
-
-.qa-input:focus {{
-    outline: none;
-    border-color: {THEME['gold']};
-    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
-}}
-
-.qa-input::placeholder {{
-    color: #999;
-}}
-
-.qa-send-btn {{
-    padding: 0.9rem 1.5rem;
-    background: {THEME['gold']};
-    color: {THEME['burgundy']};
-    border: none;
-    border-radius: 6px;
-    font-family: 'Crimson Text', serif;
-    font-size: 0.95rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    box-shadow: 0 2px 6px rgba(212, 175, 55, 0.3);
-}}
-
-.qa-send-btn:hover {{
-    background: {THEME['light_gold']};
-    transform: translateY(-1px);
-    box-shadow: 0 4px 10px rgba(212, 175, 55, 0.4);
-}}
-
-/* ═════════════════════════════════════════ */
-/* LANDING PAGE */
-/* ═════════════════════════════════════════ */
-.landing-container {{
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, {THEME['cream']} 0%, {THEME['off_white']} 100%);
-    padding: 2rem;
-}}
-
-.landing-box {{
-    text-align: center;
-    max-width: 600px;
-}}
-
-.landing-title {{
-    font-family: 'Crimson Text', serif;
-    font-size: 3rem;
-    font-weight: 600;
-    color: {THEME['burgundy']};
-    margin-bottom: 1rem;
-    letter-spacing: -0.02em;
-}}
-
-.landing-subtitle {{
-    font-family: 'Crimson Text', serif;
-    font-size: 1.3rem;
-    color: {THEME['gold']};
-    margin-bottom: 2rem;
-    font-weight: 400;
-}}
-
-.landing-description {{
-    font-size: 1rem;
-    color: {THEME['burgundy']};
-    margin-bottom: 2rem;
-    line-height: 1.8;
-}}
-
-/* ═════════════════════════════════════════ */
-/* SCROLLBAR */
-/* ═════════════════════════════════════════ */
-::-webkit-scrollbar {{
-    width: 8px;
-}}
-
-::-webkit-scrollbar-track {{
-    background: {THEME['cream']};
-}}
-
-::-webkit-scrollbar-thumb {{
-    background: {THEME['light_gold']};
-    border-radius: 4px;
-}}
-
-::-webkit-scrollbar-thumb:hover {{
-    background: {THEME['gold']};
-}}
-
-</style>
-""", unsafe_allow_html=True)
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# SIDEBAR WITH DOCUMENT MANAGEMENT
+# SIDEBAR
 # ═══════════════════════════════════════════════════════════════════════════════
 with st.sidebar:
-    st.markdown(f"""
-    <div class="sidebar-header">
-        📚 Your Documents
-    </div>
+    st.markdown("""
+    <div class="sidebar-logo">Scriptorium</div>
     """, unsafe_allow_html=True)
 
-    # Document Upload
-    st.markdown(f"""
-    <div class="sidebar-section">
-        <div class="sidebar-section-title">Upload New</div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("""<div class="sidebar-section-title">Document</div>""", unsafe_allow_html=True)
     
-    uploaded_file = st.file_uploader("Choose PDF", type=["pdf"], label_visibility="collapsed")
+    uploaded_file = st.file_uploader("Upload PDF", type=["pdf"], label_visibility="collapsed")
 
-    # Document List
-    st.markdown(f"""
-    <div class="sidebar-section">
-        <div class="sidebar-section-title">Recent Documents</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    if st.session_state.doc_name:
-        st.markdown(f"""
-        <div class="document-item">
-            <div class="document-item-name">📄 {st.session_state.doc_name[:25]}...</div>
-            <div class="document-item-meta">
-                {st.session_state.doc_stats.get('pages', 0)} pages • {st.session_state.doc_stats.get('words', 0) // 1000}k words
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    # Settings Section
-    st.markdown(f"""
-    <div class="sidebar-section">
-        <div class="sidebar-section-title">Settings</div>
-    </div>
-    """, unsafe_allow_html=True)
-
+    st.markdown("""<div class="sidebar-section-title">Navigation</div>""", unsafe_allow_html=True)
+    
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("🌙 Dark Mode" if not st.session_state.dark_mode else "☀️ Light Mode"):
-            st.session_state.dark_mode = not st.session_state.dark_mode
+        if st.button("New Session", use_container_width=True):
+            for k in ["answers", "chain", "doc_name", "doc_stats", "pdf_b64", "q_count"]:
+                st.session_state[k] = [] if k == "answers" else (0 if k == "q_count" else None)
             st.rerun()
 
     with col2:
-        if st.button("🔄 New Session"):
-            st.session_state.answers = []
-            st.session_state.chain = None
-            st.session_state.doc_name = None
-            st.rerun()
+        if st.button("History", use_container_width=True):
+            pass
 
-    # Info Section
-    st.markdown(f"""
-    <div class="sidebar-section">
-        <div class="sidebar-section-title">About</div>
-        <p style="font-size: 0.8rem; color: {THEME['burgundy']}; margin-top: 0.8rem;">
-            <strong>Scriptorium</strong> is an AI research assistant that helps you analyze documents 
-            with precision using RAG technology.
-        </p>
-        <p style="font-size: 0.75rem; color: {THEME['gold']}; margin-top: 0.8rem;">
-            Built with ❤️ by <strong>Ashlesha Sharma</strong>
-        </p>
+    st.markdown("""<div class="sidebar-section-title">About</div>""", unsafe_allow_html=True)
+    st.markdown("""
+    <div style="font-size: 0.8rem; color: #888; line-height: 1.6;">
+    Research Intelligence Platform for analyzing academic papers with precision.
     </div>
     """, unsafe_allow_html=True)
 
@@ -689,7 +557,7 @@ def build_chain(_pdf_bytes: bytes, filename: str):
     )
     prompt = PromptTemplate(
         input_variables=["context", "question"],
-        template="""You are Scriptorium, a scholarly research assistant. Answer precisely from the context provided.
+        template="""You are a research assistant. Answer precisely from the context provided.
 
 Context:
 {context}
@@ -729,23 +597,6 @@ if not os.getenv("OPENAI_API_KEY"):
     st.error("❌ No API key found. Add OPENAI_API_KEY to Streamlit secrets.")
     st.stop()
 
-# ═════════════════════════════════════���═════════════════════════════════════════
-# TOP BRAND BAR WITH SEARCH & THEME TOGGLE
-# ═══════════════════════════════════════════════════════════════════════════════
-col_brand_left, col_brand_right = st.columns([2, 1])
-
-with col_brand_left:
-    st.markdown(f"""
-    <div class="brand-bar" style="border-right: none;">
-        <div class="brand-left">
-            <div>
-                <div class="brand-title">📖 Scriptorium</div>
-                <div class="brand-subtitle">Research Intelligence</div>
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # LANDING PAGE
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -754,33 +605,29 @@ if st.session_state.chain is None:
     <div class="landing-container">
         <div class="landing-box">
             <div class="landing-title">Scriptorium</div>
-            <div class="landing-subtitle">Research Intelligence for Any Subject</div>
-            <div class="landing-description">
-                Upload any research paper, thesis, or document and ask questions in natural language.
-                Receive precise answers grounded in your document, with citations.
-            </div>
+            <div class="landing-subtitle">Research Intelligence Platform</div>
     """, unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns([1, 1, 1])
+    
     with col2:
         if uploaded_file:
             try:
                 pdf_bytes = uploaded_file.read()
-                chain, stats = build_chain(pdf_bytes, uploaded_file.name)
+                with st.spinner("Processing document..."):
+                    chain, stats = build_chain(pdf_bytes, uploaded_file.name)
                 st.session_state.chain = chain
                 st.session_state.doc_name = uploaded_file.name
                 st.session_state.doc_stats = stats
                 st.session_state.pdf_b64 = base64.b64encode(pdf_bytes).decode("utf-8")
                 st.rerun()
             except Exception as e:
-                st.error(f"❌ Error: {str(e)}")
+                st.error(f"Error: {str(e)}")
         else:
-            st.markdown(f"""
-            <div style="text-align: center; padding: 2rem;">
-                <div style="font-size: 3rem; margin-bottom: 1rem;">📄</div>
-                <div style="font-family: 'Crimson Text', serif; font-size: 1.1rem; color: {THEME['burgundy']}; margin-bottom: 1rem;">
-                    Drop your PDF here or click to browse
-                </div>
+            st.markdown("""
+            <div class="upload-zone">
+                <div class="upload-icon">📄</div>
+                <div class="upload-text">Drop your PDF here or click to browse</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -790,19 +637,25 @@ if st.session_state.chain is None:
 # WORKSPACE - SPLIT SCREEN
 # ═══════════════════════════════════════════════════════════════════════════════
 else:
-    col_pdf, col_qa = st.columns([0.48, 0.52])
+    st.markdown("""<div class="workspace-container">""", unsafe_allow_html=True)
 
     # LEFT PANE: PDF
+    col_pdf, col_qa = st.columns([0.5, 0.5], gap="small")
+
     with col_pdf:
         st.markdown(f"""
-        <div class="pdf-pane" style="height: calc(100vh - 100px);">
+        <div class="pdf-pane" style="height: 100vh; display: flex; flex-direction: column;">
             <div class="pdf-header">
-                <div class="pdf-header-title">Document</div>
-                <div class="pdf-header-meta">
-                    Pages: {st.session_state.doc_stats["pages"]} • Words: {st.session_state.doc_stats["words"]//1000}k
+                <div class="pdf-header-line">
+                    <span>FileName: {st.session_state.doc_name}</span>
+                    <span>[Zoom: 100%]</span>
+                </div>
+                <div class="pdf-header-line">
+                    <span></span>
+                    <span>[Pages: {st.session_state.doc_stats['pages']}]</span>
                 </div>
             </div>
-            <div class="pdf-viewer">
+            <div class="pdf-viewer" style="flex: 1;">
                 <iframe src="data:application/pdf;base64,{st.session_state.pdf_b64}" style="width:100%; height:100%; border:none;"></iframe>
             </div>
         </div>
@@ -811,79 +664,71 @@ else:
     # RIGHT PANE: Q&A
     with col_qa:
         st.markdown(f"""
-        <div class="qa-pane" style="height: calc(100vh - 100px);">
+        <div class="qa-pane" style="height: 100vh; display: flex; flex-direction: column;">
             <div class="qa-header">
                 <div class="qa-header-title">Ask Your Questions</div>
-                <div class="qa-header-meta">{st.session_state.q_count} / {MAX_Q} questions used</div>
+                <div class="qa-header-meta">Meta text because 7 / 10 remaining</div>
             </div>
             
-            <div class="qa-filters">
-                <div class="filter-label">🔍 Filter Results:</div>
+            <div class="qa-messages" style="flex: 1; overflow-y: auto;">
         """, unsafe_allow_html=True)
 
-        # Filter Section
-        filter_cols = st.columns(2)
-        with filter_cols[0]:
-            relevance = st.slider("Relevance", 0.0, 1.0, 0.5, step=0.1)
-        
-        st.markdown("</div>", unsafe_allow_html=True)
-
-        # Messages Display
-        st.markdown(f"""
-        <div class="qa-messages">
-        """, unsafe_allow_html=True)
-
+        # Display messages
         for item in st.session_state.answers:
             if not item.get("error"):
                 st.markdown(f"""
-                <div class="message message-user">
-                    <div class="message-user-text">{item['question']}</div>
-                    <div class="message-time">{item.get('time', '')}</div>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                st.markdown(f"""
-                <div class="message message-ai">
-                    <div class="message-ai-text">{item['content'][:500]}</div>
-                    <div class="message-evidence">📌 Source: Page {item.get('sources', [{'page': '?'}])[0]['page']}</div>
+                <div class="message-group">
+                    <div class="message-question">[Question] {item['question']}</div>
+                    <div class="message-label">Answer</div>
+                    <div class="message-content">{item['content'][:400]}</div>
+                    <div class="key-points">
+                        <div class="key-point">• Key point from the paper</div>
+                    </div>
+                    <div class="evidence-box">
+                        <div class="evidence-label">Evidence from Paper</div>
+                        <div class="evidence-text">"{item.get('sources', [{'snippet': 'Evidence snippet'}])[0]['snippet']}"</div>
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-        # Input Section
+        # Input section
         if st.session_state.q_count < MAX_Q:
-            st.markdown(f"""
+            st.markdown("""
             <div class="qa-input-section">
                 <div class="suggested-prompts">
             """, unsafe_allow_html=True)
 
-            prompts = [
-                "📌 Summarize",
-                "🔑 Key findings",
-                "🔬 Methodology",
-                "⚠️ Limitations",
-                "📝 Conclusion"
-            ]
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                if st.button("Summarize this paper", use_container_width=True):
+                    st.session_state.pending_q = "Summarize this paper"
+                    st.session_state.q_count += 1
+                    st.rerun()
 
-            for prompt in prompts:
-                if st.button(prompt, key=f"p_{prompt}"):
-                    st.session_state.pending_q = prompt
-                    st.session_state.thinking = True
+            with col2:
+                if st.button("What are key findings?", use_container_width=True):
+                    st.session_state.pending_q = "What are the key findings?"
+                    st.session_state.q_count += 1
+                    st.rerun()
+
+            with col3:
+                if st.button("What methodology is used?", use_container_width=True):
+                    st.session_state.pending_q = "What methodology is used?"
                     st.session_state.q_count += 1
                     st.rerun()
 
             st.markdown("</div>", unsafe_allow_html=True)
 
-            user_input = st.text_input("Ask me anything...", key="qa_input", placeholder="What would you like to know?")
+            user_input = st.text_input("Ask a question about the paper...", key="qa_input")
 
             if user_input:
                 st.session_state.pending_q = user_input
-                st.session_state.thinking = True
                 st.session_state.q_count += 1
                 st.rerun()
 
-            if st.session_state.thinking and st.session_state.pending_q:
+            if st.session_state.pending_q and st.session_state.q_count > 0:
                 try:
                     result = st.session_state.chain.invoke({"question": st.session_state.pending_q})
                     sources = get_sources(result.get("source_documents", []))
@@ -900,8 +745,9 @@ else:
                         "content": f"Error: {str(e)}"
                     })
                 finally:
-                    st.session_state.thinking = False
                     st.session_state.pending_q = None
                     st.rerun()
 
             st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
