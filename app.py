@@ -42,7 +42,7 @@ st.set_page_config(
 )
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# PROFESSIONAL DARK THEME STYLING
+# PROFESSIONAL DARK THEME STYLING - ENTIRELY DARK
 # ═══════════════════════════════════════════════════════════════════════════════
 st.markdown("""
 <style>
@@ -56,13 +56,18 @@ st.markdown("""
 
 html, body, [class*="css"] {
     font-family: 'Inter', sans-serif !important;
-    background-color: #1a1a1a !important;
+    background-color: #0a0a0a !important;
     color: #e0e0e0 !important;
 }
 
 .stMainBlockContainer {
     padding: 0 !important;
     max-width: 100% !important;
+    background-color: #0a0a0a !important;
+}
+
+.stMain {
+    background-color: #0a0a0a !important;
 }
 
 #MainMenu, footer, header { 
@@ -70,15 +75,16 @@ html, body, [class*="css"] {
 }
 
 /* ═════════════════════════════════════════ */
-/* SIDEBAR */
+/* SIDEBAR - DARK */
 /* ═════════════════════════════════════════ */
 section[data-testid="stSidebar"] {
-    background-color: #1f1f1f !important;
-    border-right: 1px solid #333 !important;
+    background-color: #0f0f0f !important;
+    border-right: 1px solid #222 !important;
 }
 
 section[data-testid="stSidebar"] .block-container {
     padding: 1.5rem 1rem !important;
+    background-color: #0f0f0f !important;
 }
 
 .sidebar-logo {
@@ -88,7 +94,7 @@ section[data-testid="stSidebar"] .block-container {
     color: #f5f5f5;
     margin-bottom: 2rem;
     padding-bottom: 1rem;
-    border-bottom: 1px solid #333;
+    border-bottom: 1px solid #222;
 }
 
 .sidebar-section-title {
@@ -97,24 +103,25 @@ section[data-testid="stSidebar"] .block-container {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: #888;
+    color: #666;
     margin: 1.5rem 0 0.8rem 0;
 }
 
 .sidebar-item {
-    background: #2a2a2a;
-    border: 1px solid #333;
+    background: #1a1a1a;
+    border: 1px solid #222;
     border-radius: 6px;
     padding: 0.8rem 1rem;
     margin-bottom: 0.6rem;
     cursor: pointer;
     transition: all 0.2s;
     font-size: 0.85rem;
+    color: #e0e0e0;
 }
 
 .sidebar-item:hover {
-    border-color: #555;
-    background: #333;
+    border-color: #444;
+    background: #1f1f1f;
 }
 
 /* ═════════════════════════════════════════ */
@@ -123,27 +130,27 @@ section[data-testid="stSidebar"] .block-container {
 .workspace-container {
     display: flex;
     height: 100vh;
-    background: #1a1a1a;
-    gap: 1px;
+    background: #0a0a0a;
+    gap: 0;
 }
 
 /* ═════════════════════════════════════════ */
-/* PDF PANE */
+/* PDF PANE - DARK */
 /* ═════════════════════════════════════════ */
 .pdf-pane {
     flex: 0 0 50%;
     display: flex;
     flex-direction: column;
-    background: #2a2a2a;
-    border-right: 1px solid #333;
+    background: #151515;
+    border-right: 1px solid #222;
     overflow: hidden;
 }
 
 .pdf-header {
-    background: #1f1f1f;
+    background: #0f0f0f;
     color: #e0e0e0;
     padding: 1rem 1.5rem;
-    border-bottom: 1px solid #333;
+    border-bottom: 1px solid #222;
     font-size: 0.85rem;
 }
 
@@ -152,7 +159,7 @@ section[data-testid="stSidebar"] .block-container {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 0.5rem;
-    color: #888;
+    color: #777;
 }
 
 .pdf-header-title {
@@ -166,31 +173,32 @@ section[data-testid="stSidebar"] .block-container {
 .pdf-viewer {
     flex: 1;
     overflow-y: auto;
-    background: #2a2a2a;
+    background: #151515;
 }
 
 .pdf-viewer iframe {
     width: 100%;
     height: 100%;
     border: none;
+    background: #1a1a1a;
 }
 
 /* ═════════════════════════════════════════ */
-/* Q&A PANE */
+/* Q&A PANE - DARK */
 /* ═════════════════════════════════════════ */
 .qa-pane {
     flex: 0 0 50%;
     display: flex;
     flex-direction: column;
-    background: #1a1a1a;
+    background: #0a0a0a;
     overflow: hidden;
 }
 
 .qa-header {
-    background: #1f1f1f;
+    background: #0f0f0f;
     color: #e0e0e0;
     padding: 1.5rem;
-    border-bottom: 1px solid #333;
+    border-bottom: 1px solid #222;
 }
 
 .qa-header-title {
@@ -203,7 +211,7 @@ section[data-testid="stSidebar"] .block-container {
 
 .qa-header-meta {
     font-size: 0.8rem;
-    color: #888;
+    color: #777;
 }
 
 .qa-messages {
@@ -213,6 +221,7 @@ section[data-testid="stSidebar"] .block-container {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
+    background: #0a0a0a;
 }
 
 .message-group {
@@ -231,7 +240,7 @@ section[data-testid="stSidebar"] .block-container {
 }
 
 .message-question {
-    color: #b0a89a;
+    color: #999;
     font-size: 0.9rem;
     margin-bottom: 0.8rem;
 }
@@ -259,14 +268,14 @@ section[data-testid="stSidebar"] .block-container {
 }
 
 .key-point {
-    color: #b0a89a;
+    color: #999;
     font-size: 0.9rem;
     margin-bottom: 0.4rem;
     line-height: 1.5;
 }
 
 .evidence-box {
-    background: rgba(212, 175, 55, 0.1);
+    background: rgba(212, 175, 55, 0.08);
     border-left: 3px solid #d4af37;
     padding: 0.8rem 1rem;
     margin-top: 0.8rem;
@@ -290,65 +299,66 @@ section[data-testid="stSidebar"] .block-container {
 }
 
 /* ═════════════════════════════════════════ */
-/* INPUT SECTION */
+/* INPUT SECTION - DARK */
 /* ═════════════════════════════════════════ */
 .qa-input-section {
     padding: 1.5rem;
-    border-top: 1px solid #333;
-    background: #1f1f1f;
+    border-top: 1px solid #222;
+    background: #0f0f0f;
 }
 
 .suggested-prompts {
     margin-bottom: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
 }
 
 .prompt-chip {
-    display: inline-block;
     padding: 0.6rem 1rem;
-    background: #2a2a2a;
-    color: #b0a89a;
-    border: 1px solid #333;
-    border-radius: 20px;
+    background: #1a1a1a;
+    color: #999;
+    border: 1px solid #222;
+    border-radius: 4px;
     font-size: 0.8rem;
-    margin-right: 0.5rem;
-    margin-bottom: 0.5rem;
     cursor: pointer;
     transition: all 0.2s;
+    white-space: nowrap;
 }
 
 .prompt-chip:hover {
-    background: #333;
-    border-color: #555;
-}
-
-.qa-input-box {
-    display: flex;
-    gap: 0.8rem;
+    background: #222;
+    border-color: #444;
+    color: #e0e0e0;
 }
 
 .qa-input {
     flex: 1;
     padding: 0.9rem 1.2rem;
-    border: 1px solid #333;
-    border-radius: 6px;
+    border: 1px solid #222;
+    border-radius: 4px;
     font-family: 'Crimson Text', serif;
     font-size: 0.95rem;
     color: #e0e0e0;
-    background: #2a2a2a;
+    background: #1a1a1a;
 }
 
 .qa-input:focus {
     outline: none;
-    border-color: #555;
-    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+    border-color: #444;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.05);
+}
+
+.qa-input::placeholder {
+    color: #555;
 }
 
 .qa-send-btn {
     padding: 0.9rem 1.5rem;
     background: #d4af37;
-    color: #1a1a1a;
+    color: #0a0a0a;
     border: none;
-    border-radius: 6px;
+    border-radius: 4px;
     font-family: 'Crimson Text', serif;
     font-size: 0.95rem;
     font-weight: 600;
@@ -362,7 +372,7 @@ section[data-testid="stSidebar"] .block-container {
 }
 
 /* ═════════════════════════════════════════ */
-/* LANDING PAGE */
+/* LANDING PAGE - DARK */
 /* ═════════════════════════════════════════ */
 .landing-container {
     min-height: 100vh;
@@ -370,7 +380,7 @@ section[data-testid="stSidebar"] .block-container {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: #1a1a1a;
+    background: #0a0a0a;
     padding: 2rem;
 }
 
@@ -390,7 +400,7 @@ section[data-testid="stSidebar"] .block-container {
 .landing-subtitle {
     font-family: 'Inter', sans-serif;
     font-size: 0.95rem;
-    color: #888;
+    color: #777;
     margin-bottom: 2rem;
 }
 
@@ -398,7 +408,7 @@ section[data-testid="stSidebar"] .block-container {
     border: 2px dashed #333;
     border-radius: 8px;
     padding: 3rem 2rem;
-    background: #2a2a2a;
+    background: #151515;
     margin-bottom: 2rem;
     cursor: pointer;
     transition: all 0.2s;
@@ -406,7 +416,7 @@ section[data-testid="stSidebar"] .block-container {
 
 .upload-zone:hover {
     border-color: #555;
-    background: #333;
+    background: #1a1a1a;
 }
 
 .upload-icon {
@@ -417,53 +427,53 @@ section[data-testid="stSidebar"] .block-container {
 .upload-text {
     font-family: 'Inter', sans-serif;
     font-size: 0.95rem;
-    color: #b0a89a;
+    color: #999;
 }
 
 /* ═════════════════════════════════════════ */
-/* SCROLLBAR */
+/* SCROLLBAR - DARK */
 /* ═════════════════════════════════════════ */
 ::-webkit-scrollbar {
     width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-    background: #2a2a2a;
+    background: #1a1a1a;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #555;
+    background: #444;
     border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #666;
+    background: #555;
 }
 
 /* ═════════════════════════════════════════ */
-/* STREAMLIT OVERRIDES */
+/* STREAMLIT OVERRIDES - DARK */
 /* ═════════════════════════════════════════ */
 .stButton > button {
-    background-color: #2a2a2a !important;
-    border: 1px solid #333 !important;
+    background-color: #1a1a1a !important;
+    border: 1px solid #222 !important;
     color: #e0e0e0 !important;
-    border-radius: 6px !important;
+    border-radius: 4px !important;
     transition: all 0.2s !important;
 }
 
 .stButton > button:hover {
-    background-color: #333 !important;
-    border-color: #555 !important;
+    background-color: #222 !important;
+    border-color: #444 !important;
 }
 
 .stTextInput > div > div > input {
-    background-color: #2a2a2a !important;
+    background-color: #1a1a1a !important;
     color: #e0e0e0 !important;
-    border: 1px solid #333 !important;
+    border: 1px solid #222 !important;
 }
 
 .stFileUploader {
-    background-color: #2a2a2a !important;
+    background-color: #151515 !important;
     border: 1px dashed #333 !important;
     border-radius: 8px !important;
 }
@@ -471,7 +481,7 @@ section[data-testid="stSidebar"] .block-container {
 </style>
 """, unsafe_allow_html=True)
 
-# ══════════════════════════════════════════��════════════════════════════════════
+# ═══��═══════════════════════════════════════════════════════════════════════════
 # SESSION STATE
 # ═══════════════════════════════════════════════════════════════════════════════
 for k, v in {
@@ -515,7 +525,7 @@ with st.sidebar:
 
     st.markdown("""<div class="sidebar-section-title">About</div>""", unsafe_allow_html=True)
     st.markdown("""
-    <div style="font-size: 0.8rem; color: #888; line-height: 1.6;">
+    <div style="font-size: 0.8rem; color: #777; line-height: 1.6;">
     Research Intelligence Platform for analyzing academic papers with precision.
     </div>
     """, unsafe_allow_html=True)
@@ -594,7 +604,7 @@ def get_sources(source_docs):
 # API KEY GUARD
 # ═══════════════════════════════════════════════════════════════════════════════
 if not os.getenv("OPENAI_API_KEY"):
-    st.error("❌ No API key found. Add OPENAI_API_KEY to Streamlit secrets.")
+    st.error("No API key found. Add OPENAI_API_KEY to Streamlit secrets.")
     st.stop()
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -637,11 +647,9 @@ if st.session_state.chain is None:
 # WORKSPACE - SPLIT SCREEN
 # ═══════════════════════════════════════════════════════════════════════════════
 else:
-    st.markdown("""<div class="workspace-container">""", unsafe_allow_html=True)
-
-    # LEFT PANE: PDF
     col_pdf, col_qa = st.columns([0.5, 0.5], gap="small")
 
+    # LEFT PANE: PDF
     with col_pdf:
         st.markdown(f"""
         <div class="pdf-pane" style="height: 100vh; display: flex; flex-direction: column;">
@@ -699,31 +707,6 @@ else:
             <div class="qa-input-section">
                 <div class="suggested-prompts">
             """, unsafe_allow_html=True)
-            import os
-from flask import Flask, render_template, request, redirect
-from flask_uploads import UploadSet, configure_uploads, ALL
-
-app = Flask(__name__)
-
-# Configure file upload settings
-app.config['UPLOADED_FILES_DEST'] = 'uploads'
-files = UploadSet('files', ALL)
-configure_uploads(app, files)
-
-@app.route('/')
-def landing_page():
-    return render_template('index.html')
-
-@app.route('/upload', methods=['POST'])
-def upload_file():
-    if 'file' in request.files:
-        filename = files.save(request.files['file'])
-        return redirect('/')  # Redirect to landing page after upload
-    return redirect('/')  # Redirect if no file found
-
-if __name__ == '__main__':
-    app.run(debug=True)
-
 
             col1, col2, col3 = st.columns(3)
             with col1:
@@ -774,5 +757,3 @@ if __name__ == '__main__':
                     st.rerun()
 
             st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown("</div>", unsafe_allow_html=True)
