@@ -699,6 +699,31 @@ else:
             <div class="qa-input-section">
                 <div class="suggested-prompts">
             """, unsafe_allow_html=True)
+            import os
+from flask import Flask, render_template, request, redirect
+from flask_uploads import UploadSet, configure_uploads, ALL
+
+app = Flask(__name__)
+
+# Configure file upload settings
+app.config['UPLOADED_FILES_DEST'] = 'uploads'
+files = UploadSet('files', ALL)
+configure_uploads(app, files)
+
+@app.route('/')
+def landing_page():
+    return render_template('index.html')
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'file' in request.files:
+        filename = files.save(request.files['file'])
+        return redirect('/')  # Redirect to landing page after upload
+    return redirect('/')  # Redirect if no file found
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
 
             col1, col2, col3 = st.columns(3)
             with col1:
