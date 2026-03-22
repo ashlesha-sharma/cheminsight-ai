@@ -1,9 +1,18 @@
+# API keys — never commit these
 .env
+
+# Python
 __pycache__/
 *.py[cod]
 venv/
 .venv/
+
+# ChromaDB folders (auto-generated when a PDF is indexed)
 chroma_*/
+
+# OS
 .DS_Store
 Thumbs.db
+
+# Streamlit
 .streamlit/secrets.toml

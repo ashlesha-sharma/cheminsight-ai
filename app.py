@@ -1,9 +1,12 @@
 """
-ChemInsight AI — Final production version.
-Built by Ashlesha Sharma, BSc (H) Chemistry, Miranda House.
+ChemInsight AI
+Built by Ashlesha Sharma — BSc (H) Chemistry, Miranda House, Delhi University.
 
-API key lives in Streamlit Cloud secrets. Visitors never see it.
-Session limit: 10 questions per visitor (protects OpenAI bill).
+A RAG (Retrieval-Augmented Generation) system that lets researchers
+upload chemistry papers and ask questions in plain English.
+
+API key loads from Streamlit secrets (deployed) or .env (local).
+Session limit: 10 questions per visitor.
 """
 
 import os, time, datetime
@@ -23,24 +26,19 @@ import tempfile
 
 load_dotenv()
 
-# ── Get API key — from Streamlit secrets (deployed) or .env (local) ────────────
-# When deployed: set OPENAI_API_KEY in Streamlit Cloud → Settings → Secrets
-# When local: put it in your .env file
+# ── API key: Streamlit secrets (deployed) or .env (local) ─────────────────────
 def get_api_key():
-    # Try Streamlit secrets first (deployed version)
     try:
         return st.secrets["OPENAI_API_KEY"]
     except Exception:
-        pass
-    # Fall back to environment variable (local .env)
-    return os.getenv("OPENAI_API_KEY", "")
+        return os.getenv("OPENAI_API_KEY", "")
 
 OPENAI_API_KEY = get_api_key()
 if OPENAI_API_KEY:
     os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 
 # ── Constants ──────────────────────────────────────────────────────────────────
-MAX_QUESTIONS = 10      # Per session limit — protects your OpenAI bill
+MAX_QUESTIONS = 10
 MODEL         = "gpt-4o-mini"
 EMBED_MODEL   = "text-embedding-3-small"
 CHUNK_SIZE    = 900
@@ -72,7 +70,6 @@ section[data-testid="stSidebar"] {
     border-right: 1px solid #1a2340 !important;
 }
 
-/* ── Hero ── */
 .hero {
     background: linear-gradient(135deg, #0d1a3a 0%, #0a1628 60%, #071020 100%);
     border: 1px solid #1a2d50;
@@ -116,13 +113,8 @@ section[data-testid="stSidebar"] {
     margin: 0 0 0.3rem 0;
     line-height: 1.1;
 }
-.hero-sub {
-    font-size: 0.98rem;
-    color: #4a5568;
-    margin: 0;
-}
+.hero-sub { font-size: 0.98rem; color: #4a5568; margin: 0; }
 
-/* ── Stats ── */
 .stat-row { display: flex; gap: 10px; margin: 1rem 0; }
 .stat-card {
     flex: 1;
@@ -149,7 +141,6 @@ section[data-testid="stSidebar"] {
     margin-top: 4px;
 }
 
-/* ── Usage bar ── */
 .usage-wrap {
     background: #0d1628;
     border: 1px solid #1a2d50;
@@ -165,19 +156,9 @@ section[data-testid="stSidebar"] {
     margin-bottom: 6px;
     font-family: 'JetBrains Mono', monospace;
 }
-.usage-track {
-    height: 5px;
-    background: #1a2d50;
-    border-radius: 3px;
-    overflow: hidden;
-}
-.usage-fill {
-    height: 100%;
-    border-radius: 3px;
-    transition: width 0.4s ease;
-}
+.usage-track { height: 5px; background: #1a2d50; border-radius: 3px; overflow: hidden; }
+.usage-fill  { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
 
-/* ── Status pill ── */
 .status-ready {
     display: inline-flex;
     align-items: center;
@@ -203,7 +184,6 @@ section[data-testid="stSidebar"] {
     50%      { opacity:.4; transform:scale(.75); }
 }
 
-/* ── Section heads ── */
 .sec {
     font-size: 0.7rem;
     font-weight: 600;
@@ -214,9 +194,7 @@ section[data-testid="stSidebar"] {
     font-family: 'JetBrains Mono', monospace;
 }
 
-/* ── Chat bubbles ── */
 .bubble-user {
-    align-self: flex-end;
     max-width: 78%;
     background: linear-gradient(135deg,#1a3a6e,#1e4080);
     border: 1px solid #2a5099;
@@ -265,7 +243,6 @@ section[data-testid="stSidebar"] {
     font-family: 'JetBrains Mono', monospace;
 }
 
-/* ── Source passages ── */
 .src-pill {
     display: inline-block;
     background: #fbbf2413;
@@ -290,7 +267,6 @@ section[data-testid="stSidebar"] {
     font-family: 'JetBrains Mono', monospace;
 }
 
-/* ── Empty state ── */
 .empty-state {
     background: #0d1628;
     border: 1px solid #1a2d50;
@@ -299,8 +275,6 @@ section[data-testid="stSidebar"] {
     text-align: center;
     margin-top: 1rem;
 }
-
-/* ── Limit wall ── */
 .limit-wall {
     background: linear-gradient(135deg,#1a1028,#0d0a1a);
     border: 1px solid #4a1c6e;
@@ -310,7 +284,6 @@ section[data-testid="stSidebar"] {
     margin-top: 1rem;
 }
 
-/* ── Streamlit overrides ── */
 .stButton > button {
     background: #0d1628 !important;
     border: 1px solid #1a2d50 !important;
@@ -357,12 +330,12 @@ div[data-testid="stFileUploader"] {
 
 # ── Session state ──────────────────────────────────────────────────────────────
 for k, v in {
-    "messages":       [],
-    "chain":          None,
-    "doc_name":       None,
-    "doc_stats":      None,
-    "q_count":        0,
-    "pending_q":      None,
+    "messages":  [],
+    "chain":     None,
+    "doc_name":  None,
+    "doc_stats": None,
+    "q_count":   0,
+    "pending_q": None,
 }.items():
     if k not in st.session_state:
         st.session_state[k] = v
@@ -381,7 +354,6 @@ with st.sidebar:
 
     st.divider()
 
-    # ── Usage meter ────────────────────────────────────────────────────────────
     used  = st.session_state.q_count
     left  = MAX_QUESTIONS - used
     pct   = int((used / MAX_QUESTIONS) * 100)
@@ -397,14 +369,13 @@ with st.sidebar:
             <div class="usage-fill" style="width:{pct}%;background:{color}"></div>
         </div>
         <div style="font-size:.72rem;color:#2d3f5a;margin-top:6px">
-            {left} question{'s' if left != 1 else ''} remaining this session
+            {left} question{'s' if left != 1 else ''} remaining · refresh to reset
         </div>
     </div>
     """, unsafe_allow_html=True)
 
     st.divider()
 
-    # ── How it works ───────────────────────────────────────────────────────────
     st.markdown('<div class="sec">How RAG works</div>', unsafe_allow_html=True)
     st.markdown("""
     <div style="font-size:.8rem;color:#334155;line-height:1.8">
@@ -420,10 +391,10 @@ with st.sidebar:
 
     st.divider()
 
-    # ── About ──────────────────────────────────────────────────────────────────
     st.markdown("""
     <div style="font-size:.75rem;color:#2d3f5a;line-height:1.9">
-        Built by <span style="color:#94a3b8;font-weight:500">Ashlesha Sharma</span><br>
+        Built by
+        <span style="color:#94a3b8;font-weight:500">Ashlesha Sharma</span><br>
         BSc (H) Chemistry<br>
         Miranda House · Delhi University<br><br>
         <span style="color:#00d4aa">→</span>
@@ -435,19 +406,19 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
 
-# ── No API key guard ───────────────────────────────────────────────────────────
-# This only shows in local dev if .env is missing.
-# On Streamlit Cloud, the key comes from secrets so this never triggers.
+# ── API key guard ──────────────────────────────────────────────────────────────
 if not os.getenv("OPENAI_API_KEY"):
-    st.error("⚠️ No API key found. Add OPENAI_API_KEY to your .env file (local) or Streamlit secrets (deployed).")
+    st.error("⚠️ No API key found. Add OPENAI_API_KEY to Streamlit secrets (deployed) or a .env file (local).")
     st.stop()
 
 
 # ── Core functions ─────────────────────────────────────────────────────────────
 @st.cache_resource(show_spinner=False)
 def build_chain(_pdf_bytes: bytes, filename: str):
-    """Process PDF and build the RAG chain. Cached so it only runs once per file."""
-
+    """
+    Processes a PDF and returns a conversational RAG chain + document stats.
+    Cached — runs only once per unique file, even if the page reruns.
+    """
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
         tmp.write(_pdf_bytes)
         tmp_path = tmp.name
@@ -456,7 +427,6 @@ def build_chain(_pdf_bytes: bytes, filename: str):
     pages  = loader.load()
     os.unlink(tmp_path)
 
-    # Detect scanned PDFs
     total_text = " ".join(p.page_content for p in pages).strip()
     if len(total_text) < 150:
         raise ValueError("SCANNED_PDF")
@@ -475,7 +445,6 @@ def build_chain(_pdf_bytes: bytes, filename: str):
         persist_directory=f"./chroma_{filename[:18].replace('.','_')}",
     )
 
-    # MMR retrieval = diverse passages, not just top-4 most similar
     retriever = vectorstore.as_retriever(
         search_type="mmr",
         search_kwargs={"k": TOP_K, "fetch_k": TOP_K * 3},
@@ -494,10 +463,10 @@ def build_chain(_pdf_bytes: bytes, filename: str):
 Your job is to answer questions about a specific scientific paper uploaded by the user.
 
 Rules:
-- Answer ONLY from the context below. If the answer is not there, say clearly: "This specific detail isn't in the uploaded paper."
+- Answer ONLY from the context below. If the answer is not there, say: "This specific detail isn't covered in the uploaded paper."
 - Never guess or use outside knowledge.
 - Always quote specific numbers: yields, temperatures, concentrations, wavelengths, times.
-- For reaction mechanisms, go step by step.
+- For reaction mechanisms, explain step by step.
 - Be precise but clear — the user may be a student trying to understand, not just extract data.
 
 Context from the paper:
@@ -510,7 +479,7 @@ Question: {question}
 Answer:""",
     )
 
-    llm = ChatOpenAI(model_name=MODEL, temperature=0.1)
+    llm   = ChatOpenAI(model_name=MODEL, temperature=0.1)
     chain = ConversationalRetrievalChain.from_llm(
         llm=llm,
         retriever=retriever,
@@ -544,7 +513,7 @@ def get_sources(source_docs):
 def density_chart(page_lengths):
     avg    = sum(page_lengths) / len(page_lengths)
     colors = ["#00d4aa" if l >= avg else "#1a2d50" for l in page_lengths]
-    fig = go.Figure(go.Bar(
+    fig    = go.Figure(go.Bar(
         x=list(range(1, len(page_lengths) + 1)),
         y=page_lengths,
         marker_color=colors,
@@ -552,10 +521,8 @@ def density_chart(page_lengths):
         hovertemplate="Page %{x} — %{y} characters<extra></extra>",
     ))
     fig.update_layout(
-        title=dict(
-            text="Text density · teal = above average",
-            font=dict(size=11, color="#334155"), x=0,
-        ),
+        title=dict(text="Text density · teal = above average",
+                   font=dict(size=11, color="#334155"), x=0),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         font=dict(family="Outfit", color="#475569", size=10),
@@ -601,8 +568,8 @@ st.markdown("""
     <div class="hero-badge">⚗ RAG · LangChain · OpenAI · Free to use</div>
     <div class="hero-title">ChemInsight AI</div>
     <div class="hero-sub">
-        Upload any chemistry paper. Ask questions. Get answers grounded in the actual document —
-        not the internet, not guesswork.
+        Upload any chemistry paper. Ask questions. Get answers grounded in the actual
+        document — not the internet, not guesswork.
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -620,11 +587,10 @@ with left:
         "Drop a chemistry PDF",
         type=["pdf"],
         label_visibility="collapsed",
-        help="Research papers, textbook chapters, lab reports. Must have selectable text.",
+        help="Research papers, textbook chapters, lab reports. Needs selectable text.",
     )
 
     if uploaded:
-        # New file → reset everything
         if st.session_state.doc_name != uploaded.name:
             st.session_state.messages = []
             st.session_state.q_count  = 0
@@ -633,7 +599,7 @@ with left:
             time.sleep(0.2)
             bar.progress(25, text="Splitting into chunks...")
             time.sleep(0.1)
-            bar.progress(50, text="Building vector index… (~20s)...")
+            bar.progress(50, text="Building vector index — takes about 20 seconds...")
 
             try:
                 chain, stats = build_chain(uploaded.read(), uploaded.name)
@@ -643,27 +609,26 @@ with left:
                 time.sleep(0.4)
                 bar.empty()
 
-                st.session_state.chain    = chain
-                st.session_state.doc_name = uploaded.name
+                st.session_state.chain     = chain
+                st.session_state.doc_name  = uploaded.name
                 st.session_state.doc_stats = stats
 
             except ValueError as e:
                 bar.empty()
                 if "SCANNED_PDF" in str(e):
-                    st.error("⚠️ Scanned PDF detected — no extractable text found. Try a PDF where you can select and copy text.")
+                    st.error("⚠️ This PDF appears to be scanned — no extractable text found. Try a PDF where you can select and copy text.")
                 else:
                     st.error(f"Error: {e}")
             except Exception as e:
                 bar.empty()
                 err = str(e).lower()
                 if "api" in err or "key" in err or "auth" in err:
-                    st.error("API key error — check Streamlit secrets or your .env file.")
+                    st.error("API key error. Check that the key is set correctly in Streamlit secrets.")
                 elif "rate" in err:
                     st.error("Rate limit hit — wait 60 seconds and try again.")
                 else:
                     st.error(f"Something went wrong: {e}")
 
-        # ── Stats ──────────────────────────────────────────────────────────────
         if st.session_state.doc_stats:
             s    = st.session_state.doc_stats
             name = st.session_state.doc_name
@@ -697,7 +662,6 @@ with left:
             </div>
             """, unsafe_allow_html=True)
 
-            # Charts
             if len(s["page_lengths"]) > 1:
                 st.plotly_chart(
                     density_chart(s["page_lengths"]),
@@ -728,23 +692,20 @@ with left:
                 </div>
                 """, unsafe_allow_html=True)
 
-            # Quick questions
             st.markdown('<div class="sec">💡 Quick questions</div>', unsafe_allow_html=True)
-            quick = [
+            for q in [
                 "🎯  What is the main objective?",
                 "⚗️  What reagents and conditions were used?",
                 "📊  What were the key results and yields?",
                 "🔬  Explain the proposed mechanism.",
                 "⚠️  What limitations are mentioned?",
                 "📝  Summarise the experimental procedure.",
-            ]
-            for q in quick:
+            ]:
                 if st.button(q, key=f"q_{q}"):
                     st.session_state.pending_q = q[3:].strip()
                     st.rerun()
 
     else:
-        # Empty upload state
         st.markdown("""
         <div style="
             background:#0d1628; border:2px dashed #1a2d50;
@@ -785,7 +746,6 @@ with right:
         """, unsafe_allow_html=True)
 
     else:
-        # ── Chat history ───────────────────────────────────────────────────────
         for msg in st.session_state.messages:
             ts = msg.get("time", "")
             if msg["role"] == "user":
@@ -815,7 +775,6 @@ with right:
 
         st.divider()
 
-        # ── Session limit wall ─────────────────────────────────────────────────
         if st.session_state.q_count >= MAX_QUESTIONS:
             st.markdown("""
             <div class="limit-wall">
@@ -824,17 +783,16 @@ with right:
                     Session limit reached
                 </div>
                 <div style="font-size:.85rem;color:#475569;line-height:1.7">
-                    You've used all 10 free questions for this session.<br>
+                    You have used all 10 questions for this session.<br>
                     Refresh the page to start a new session.
                 </div>
             </div>
             """, unsafe_allow_html=True)
 
         else:
-            # ── Input ──────────────────────────────────────────────────────────
-            remaining = MAX_QUESTIONS - st.session_state.q_count
+            remaining  = MAX_QUESTIONS - st.session_state.q_count
             user_input = st.chat_input(
-                f"Ask anything about the paper… ({remaining} question{'s' if remaining != 1 else ''} left)"
+                f"Ask anything about the paper — {remaining} question{'s' if remaining != 1 else ''} left"
             )
             question = st.session_state.pending_q or user_input
 
@@ -843,9 +801,7 @@ with right:
                 now = datetime.datetime.now().strftime("%H:%M")
 
                 st.session_state.messages.append({
-                    "role": "user",
-                    "content": question,
-                    "time": now,
+                    "role": "user", "content": question, "time": now,
                 })
                 st.session_state.q_count += 1
 
@@ -854,23 +810,20 @@ with right:
                         result  = st.session_state.chain.invoke({"question": question})
                         answer  = result["answer"]
                         sources = get_sources(result.get("source_documents", []))
-
                         st.session_state.messages.append({
                             "role": "assistant",
                             "content": answer,
                             "sources": sources,
                             "time": datetime.datetime.now().strftime("%H:%M"),
                         })
-
                     except Exception as e:
                         err = str(e).lower()
                         if "rate" in err:
-                            msg = "Hit OpenAI rate limit — wait 60 seconds."
+                            msg = "Rate limit hit — wait 60 seconds and try again."
                         elif "api" in err or "key" in err:
                             msg = "API key error — contact the app owner."
                         else:
-                            msg = f"Error: {e}"
-
+                            msg = f"Unexpected error: {e}"
                         st.session_state.messages.append({
                             "role": "assistant",
                             "content": f"⚠️ {msg}",
@@ -880,7 +833,6 @@ with right:
 
                 st.rerun()
 
-            # ── Clear ──────────────────────────────────────────────────────────
             if st.session_state.messages:
                 st.markdown("<br>", unsafe_allow_html=True)
                 if st.button("🗑 Clear conversation"):
