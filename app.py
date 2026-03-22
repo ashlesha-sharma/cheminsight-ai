@@ -1,5 +1,6 @@
 """
 Scriptorium — research intelligence for any subject.
+Professional UI with old money aesthetic, sidebar, search, filters & dark mode.
 Built by Ashlesha Sharma, Miranda House, Delhi University.
 """
 
@@ -28,546 +29,632 @@ KEY = get_api_key()
 if KEY:
     os.environ["OPENAI_API_KEY"] = KEY
 
-MAX_Q         = 10
-MODEL         = "gpt-4o-mini"
-EMBED_MODEL   = "text-embedding-3-small"
-CHUNK_SIZE    = 900
+MAX_Q = 10
+MODEL = "gpt-4o-mini"
+EMBED_MODEL = "text-embedding-3-small"
+CHUNK_SIZE = 900
 CHUNK_OVERLAP = 180
-TOP_K         = 4
+TOP_K = 4
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# COLOR PALETTES - OLD MONEY AESTHETIC
+# ═══════════════════════════════════════════════════════════════════════════════
+LIGHT_MODE = {
+    "cream": "#F5F1E8",
+    "burgundy": "#2C1810",
+    "gold": "#D4AF37",
+    "light_gold": "#E6C957",
+    "off_white": "#FEFAF0",
+    "shadow": "#1a1a1a",
+    "burgundy_light": "#3D2817",
+    "border": "#E0D5C5",
+}
+
+DARK_MODE = {
+    "cream": "#1A1410",          # Dark burgundy-tinted background
+    "burgundy": "#F5F1E8",       # Light text
+    "gold": "#D4AF37",           # Same gold
+    "light_gold": "#E6C957",     # Same light gold
+    "off_white": "#2A1F18",      # Darker cards
+    "shadow": "#0F0A08",         # Very dark
+    "burgundy_light": "#3D2817", # Slightly lighter burgundy
+    "border": "#4A3A2A",         # Dark border
+}
 
 st.set_page_config(
     page_title="Scriptorium",
-    page_icon="S",
+    page_icon="📖",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-st.markdown("""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@400&display=swap');
+# ═══════════════════════════════════════════════════════════════════════════════
+# SESSION STATE
+# ═══════════════════════════════════════════════════════════════════════════════
+if "dark_mode" not in st.session_state:
+    st.session_state.dark_mode = False
 
-/* ── palette ────────────────────────────────────────────
-   One dark theme. Narrow tonal range. Accent used once.
-   bg0   #0C0F14   deepest base
-   bg1   #131720   panels
-   bg2   #181D28   elevated cards
-   bd0   #1A2030   faint border
-   bd1   #222B3A   default border
-   t0    #C4BBa8   primary text   (warm off-white)
-   t1    #4E5768   secondary text
-   t2    #272F3E   muted / disabled
-   acc   #8A6E3C   accent — muted gold, used sparingly
-──────────────────────────────────────────────────────── */
+if "search_query" not in st.session_state:
+    st.session_state.search_query = ""
 
-html, body, [class*="css"] {
-    font-family: 'Inter', sans-serif !important;
-    background-color: #0C0F14 !important;
-    color: #C4BBA8 !important;
-}
-#MainMenu, footer, header { visibility: hidden; }
-.block-container {
-    padding: 0 !important;
-    max-width: 100% !important;
-}
-section[data-testid="stSidebar"] {
-    background: #0C0F14 !important;
-    border-right: 1px solid #1A2030 !important;
-}
-section[data-testid="stSidebar"] .block-container {
-    padding: 1.4rem 1rem !important;
-}
+if "filter_by_relevance" not in st.session_state:
+    st.session_state.filter_by_relevance = 0.0
 
-/* sidebar brand */
-.sb-brand {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.1rem;
-    font-weight: 500;
-    color: #C4BBA8;
-    letter-spacing: 0.02em;
-    margin-bottom: 1.6rem;
-}
-.sb-section {
-    font-size: 0.6rem;
-    font-weight: 400;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: #272F3E;
-    font-family: 'JetBrains Mono', monospace;
-    margin: 0 0 0.5rem 0;
-}
-.sb-new-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    padding: 8px 10px;
-    background: #131720;
-    border: 1px solid #1A2030;
-    border-radius: 4px;
-    color: #4E5768;
-    font-size: 0.78rem;
-    cursor: pointer;
-    transition: all 0.15s;
-    margin-bottom: 1rem;
-    font-family: 'Inter', sans-serif;
-}
-.sb-new-btn:hover { border-color: #222B3A; color: #C4BBA8; }
-.sb-file-item {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    padding: 9px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background 0.12s;
-    margin-bottom: 1px;
-}
-.sb-file-item:hover  { background: #131720; }
-.sb-file-item.active { background: #131720; border-left: 2px solid #8A6E3C; padding-left: 8px; }
-.sb-file-icon {
-    width: 28px; height: 28px;
-    background: #181D28;
-    border: 1px solid #1A2030;
-    border-radius: 3px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0.7rem; font-family: 'JetBrains Mono', monospace;
-    color: #4E5768; flex-shrink: 0;
-}
-.sb-file-name {
-    font-size: 0.78rem;
-    color: #C4BBA8;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 140px;
-}
-.sb-file-meta {
-    font-size: 0.65rem;
-    color: #272F3E;
-    font-family: 'JetBrains Mono', monospace;
-    margin-top: 1px;
-}
-.sb-usage {
-    background: #131720;
-    border: 1px solid #1A2030;
-    border-radius: 4px;
-    padding: 10px 12px;
-    margin-top: 1rem;
-}
-.sb-usage-row {
-    display: flex; justify-content: space-between;
-    font-size: 0.68rem; margin-bottom: 6px;
-    font-family: 'JetBrains Mono', monospace;
-}
-.sb-usage-label { color: #272F3E; }
-.sb-usage-count { color: #4E5768; }
-.sb-track { height: 1px; background: #1A2030; border-radius: 1px; overflow: hidden; }
-.sb-fill  { height: 100%; background: #8A6E3C; transition: width 0.4s; }
-.sb-about {
-    font-size: 0.68rem;
-    color: #272F3E;
-    font-family: 'JetBrains Mono', monospace;
-    line-height: 1.8;
-    margin-top: 1.4rem;
-}
-.sb-about a { color: #4E5768; text-decoration: none; }
-
-/* ── landing (before upload) ─────────────────────────── */
-.landing-wrap {
-    min-height: 85vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 3rem 2rem;
-}
-.landing-greeting {
-    font-family: 'Playfair Display', serif;
-    font-size: 2rem;
-    font-weight: 400;
-    color: #C4BBA8;
-    text-align: center;
-    margin-bottom: 0.5rem;
-    letter-spacing: -0.01em;
-}
-.landing-sub {
-    font-size: 0.9rem;
-    color: #4E5768;
-    text-align: center;
-    font-weight: 300;
-    margin-bottom: 2.5rem;
-    letter-spacing: 0.02em;
-}
-.upload-card {
-    width: 100%;
-    max-width: 520px;
-    background: #131720;
-    border: 1px solid #1A2030;
-    border-radius: 6px;
-    padding: 2.5rem 2rem;
-    text-align: center;
-}
-.upload-card-title {
-    font-size: 0.85rem;
-    color: #C4BBA8;
-    font-weight: 400;
-    margin-bottom: 0.3rem;
-}
-.upload-card-sub {
-    font-size: 0.75rem;
-    color: #4E5768;
-    font-weight: 300;
-    margin-bottom: 1.4rem;
-}
-.landing-note {
-    font-size: 0.72rem;
-    color: #272F3E;
-    font-family: 'JetBrains Mono', monospace;
-    margin-top: 1.6rem;
-    letter-spacing: 0.04em;
-    text-align: center;
-}
-
-/* ── workspace (after upload) ────────────────────────── */
-.workspace { padding: 1.4rem 1.8rem 2rem; }
-.pane-label {
-    font-size: 0.6rem;
-    font-weight: 400;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: #272F3E;
-    font-family: 'JetBrains Mono', monospace;
-    margin-bottom: 0.6rem;
-}
-.pdf-bar {
-    background: #131720;
-    border: 1px solid #1A2030;
-    border-bottom: none;
-    border-radius: 4px 4px 0 0;
-    padding: 7px 14px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.65rem;
-    color: #4E5768;
-}
-.pdf-bar-name { color: #8A6E3C; }
-.pdf-frame-wrap {
-    border: 1px solid #1A2030;
-    border-radius: 0 0 4px 4px;
-    overflow: hidden;
-}
-.stat-row { display: flex; gap: 6px; margin: 0.7rem 0 1rem; }
-.stat-card {
-    flex: 1;
-    background: #131720;
-    border: 1px solid #1A2030;
-    border-radius: 3px;
-    padding: 9px 10px;
-    text-align: center;
-}
-.stat-n {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.3rem;
-    color: #C4BBA8;
-    line-height: 1;
-}
-.stat-l {
-    font-size: 0.58rem;
-    color: #272F3E;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-top: 2px;
-    font-family: 'JetBrains Mono', monospace;
-}
-
-/* ── Q&A panel ───────────────────────────────────────── */
-.qa-title-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 1rem;
-}
-.qa-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.15rem;
-    font-weight: 400;
-    color: #C4BBA8;
-}
-.qa-count {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.68rem;
-    color: #4E5768;
-}
-.qa-count strong { color: #C4BBA8; font-weight: 400; }
-
-/* prompt chips */
-.prompt-chips { display: flex; flex-direction: column; gap: 4px; margin-bottom: 1rem; }
-.prompt-chip {
-    padding: 7px 12px;
-    background: #131720;
-    border: 1px solid #1A2030;
-    border-radius: 3px;
-    font-size: 0.78rem;
-    color: #4E5768;
-    cursor: pointer;
-    transition: all 0.12s;
-}
-.prompt-chip:hover { border-color: #222B3A; color: #C4BBA8; }
-
-/* answer card */
-.a-card {
-    background: #131720;
-    border: 1px solid #1A2030;
-    border-left: 2px solid #8A6E3C;
-    border-radius: 0 4px 4px 0;
-    padding: 18px 20px;
-    margin: 10px 0;
-}
-.a-q {
-    font-family: 'Playfair Display', serif;
-    font-size: 0.88rem;
-    font-style: italic;
-    color: #4E5768;
-    margin-bottom: 12px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #1A2030;
-}
-.a-sec {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.56rem;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: #8A6E3C;
-    margin: 12px 0 4px;
-}
-.a-body {
-    font-size: 0.85rem;
-    color: #B0A896;
-    line-height: 1.8;
-    font-weight: 300;
-}
-.a-pts {
-    margin: 0; padding-left: 14px;
-    font-size: 0.82rem;
-    color: #B0A896;
-    line-height: 1.8;
-    font-weight: 300;
-}
-.a-pts li { margin-bottom: 2px; }
-.evidence {
-    background: #0C0F14;
-    border-left: 1px solid #4E5768;
-    padding: 8px 12px;
-    margin: 6px 0;
-    border-radius: 0 2px 2px 0;
-}
-.evidence-text {
-    font-size: 0.78rem;
-    color: #4E5768;
-    font-style: italic;
-    line-height: 1.55;
-}
-.evidence-ref {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.56rem;
-    color: #272F3E;
-    margin-top: 4px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-}
-.a-time {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.58rem;
-    color: #1A2030;
-    text-align: right;
-    margin-top: 10px;
-}
-
-/* thinking */
-.thinking {
-    display: flex; align-items: center; gap: 10px;
-    padding: 12px 16px;
-    background: #131720;
-    border: 1px solid #1A2030;
-    border-radius: 4px;
-    margin: 8px 0;
-}
-.t-dot {
-    width: 7px; height: 7px;
-    background: #8A6E3C;
-    border-radius: 50%;
-    animation: tp 1.4s ease-in-out infinite;
-    flex-shrink: 0;
-}
-@keyframes tp { 0%,100%{opacity:.9;} 50%{opacity:.25;} }
-.t-text {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.68rem;
-    color: #4E5768;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-}
-
-/* empty / limit */
-.empty-qa {
-    background: #131720;
-    border: 1px solid #1A2030;
-    border-radius: 4px;
-    padding: 3rem 2rem;
-    text-align: center;
-    margin-top: 0.5rem;
-}
-.empty-qa-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 0.95rem;
-    color: #4E5768;
-    font-weight: 400;
-    margin-bottom: 0.3rem;
-}
-.empty-qa-sub { font-size: 0.75rem; color: #272F3E; font-weight: 300; }
-.limit-wall {
-    background: #131720;
-    border: 1px solid #1A2030;
-    border-radius: 4px;
-    padding: 1.6rem;
-    text-align: center;
-    margin-top: 1rem;
-}
-
-/* streamlit overrides */
-.stButton > button {
-    background: #131720 !important;
-    border: 1px solid #1A2030 !important;
-    color: #4E5768 !important;
-    border-radius: 3px !important;
-    font-family: 'Inter', sans-serif !important;
-    font-size: 0.78rem !important;
-    font-weight: 400 !important;
-    transition: all .15s !important;
-    text-align: left !important;
-    justify-content: flex-start !important;
-    width: 100% !important;
-    padding: 7px 12px !important;
-}
-.stButton > button:hover {
-    border-color: #222B3A !important;
-    color: #C4BBA8 !important;
-    background: #181D28 !important;
-}
-div[data-testid="stChatInput"] textarea {
-    background: #131720 !important;
-    border: 1px solid #1A2030 !important;
-    color: #C4BBA8 !important;
-    border-radius: 4px !important;
-    font-family: 'Inter', sans-serif !important;
-    font-size: 0.88rem !important;
-}
-div[data-testid="stChatInput"] textarea:focus {
-    border-color: #8A6E3C !important;
-    box-shadow: none !important;
-}
-div[data-testid="stFileUploader"] {
-    background: #131720 !important;
-    border: 1px dashed #1A2030 !important;
-    border-radius: 4px !important;
-}
-.stProgress > div > div { background: #8A6E3C !important; }
-.streamlit-expanderHeader {
-    background: #131720 !important;
-    border: 1px solid #1A2030 !important;
-    border-radius: 3px !important;
-    color: #4E5768 !important;
-    font-size: 0.75rem !important;
-    font-family: 'JetBrains Mono', monospace !important;
-    letter-spacing: 0.04em !important;
-}
-hr { border-color: #1A2030 !important; opacity: 1 !important; }
-</style>
-""", unsafe_allow_html=True)
-
-
-# ── session state ──────────────────────────────────────────────────────────────
 for k, v in {
-    "answers":   [],
-    "chain":     None,
-    "doc_name":  None,
+    "answers": [],
+    "chain": None,
+    "doc_name": None,
     "doc_stats": None,
-    "pdf_b64":   None,
-    "q_count":   0,
+    "pdf_b64": None,
+    "q_count": 0,
     "pending_q": None,
-    "thinking":  False,
-    "last_q":    None,
-    "sessions":  [],
+    "thinking": False,
+    "last_q": None,
+    "documents": [],
 }.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# THEME SELECTOR
+# ═══════════════════════════════════════════════════════════════════════════════
+THEME = DARK_MODE if st.session_state.dark_mode else LIGHT_MODE
 
-# ── sidebar ────────────────────────────────────────────────────────────────────
+# ══════���════════════════════════════════════════════════════════════════════════
+# COMPREHENSIVE STYLING WITH DARK MODE
+# ═══════════════════════════════════════════════════════════════════════════════
+st.markdown(f"""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;600&family=Crimson+Text:wght@400;600&family=Inter:wght@300;400;500&display=swap');
+
+* {{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}}
+
+html, body, [class*="css"] {{
+    font-family: 'Crimson Text', 'Georgia', serif !important;
+    background-color: {THEME['cream']} !important;
+    color: {THEME['burgundy']} !important;
+}}
+
+.stMainBlockContainer {{
+    padding: 0 !important;
+    max-width: 100% !important;
+}}
+
+#MainMenu, footer, header {{ visibility: hidden; }}
+
+/* ═════════════════════════════════════════ */
+/* SIDEBAR STYLING */
+/* ═════════════════════════════════════════ */
+section[data-testid="stSidebar"] {{
+    background-color: {THEME['off_white']} !important;
+    border-right: 3px solid {THEME['gold']} !important;
+}}
+
+section[data-testid="stSidebar"] .block-container {{
+    padding: 1.5rem 1rem !important;
+}}
+
+.sidebar-header {{
+    font-family: 'Crimson Text', serif;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: {THEME['burgundy']};
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid {THEME['light_gold']};
+}}
+
+.sidebar-section {{
+    margin-bottom: 1.8rem;
+}}
+
+.sidebar-section-title {{
+    font-family: 'Inter', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: {THEME['gold']};
+    margin-bottom: 0.8rem;
+}}
+
+.document-item {{
+    background: {THEME['cream']};
+    border: 1px solid {THEME['border']};
+    border-radius: 6px;
+    padding: 0.9rem;
+    margin-bottom: 0.6rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}}
+
+.document-item:hover {{
+    border-color: {THEME['gold']};
+    box-shadow: 0 2px 8px rgba(212, 175, 55, 0.15);
+}}
+
+.document-item-name {{
+    font-family: 'Crimson Text', serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: {THEME['burgundy']};
+    margin-bottom: 0.3rem;
+}}
+
+.document-item-meta {{
+    font-family: 'Inter', sans-serif;
+    font-size: 0.7rem;
+    color: {THEME['gold']};
+}}
+
+/* ═════════════════════════════════════════ */
+/* TOP BRAND BAR */
+/* ═════════════════════════════════════════ */
+.brand-bar {{
+    background: linear-gradient(135deg, {THEME['burgundy']} 0%, {THEME['burgundy_light']} 100%);
+    color: {THEME['off_white']};
+    padding: 1.2rem 2rem;
+    border-bottom: 3px solid {THEME['gold']};
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}}
+
+.brand-left {{
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}}
+
+.brand-title {{
+    font-family: 'Crimson Text', serif;
+    font-size: 1.8rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+}}
+
+.brand-subtitle {{
+    font-family: 'Inter', sans-serif;
+    font-size: 0.7rem;
+    color: {THEME['light_gold']};
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-top: 0.2rem;
+}}
+
+.brand-right {{
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}}
+
+.search-box {{
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid {THEME['light_gold']};
+    border-radius: 6px;
+    padding: 0.6rem 1rem;
+    color: {THEME['off_white']};
+    font-family: 'Crimson Text', serif;
+    font-size: 0.9rem;
+    width: 200px;
+}}
+
+.search-box:focus {{
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.3);
+}}
+
+.theme-toggle {{
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid {THEME['light_gold']};
+    color: {THEME['off_white']};
+    padding: 0.6rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s;
+}}
+
+.theme-toggle:hover {{
+    background: rgba(212, 175, 55, 0.3);
+}}
+
+/* ═════════════════════════════════════════ */
+/* MAIN WORKSPACE */
+/* ═════════════════════════════════════════ */
+.workspace-container {{
+    display: flex;
+    height: calc(100vh - 80px);
+    gap: 2px;
+    background: {THEME['shadow']};
+}}
+
+.pdf-pane {{
+    flex: 0 0 48%;
+    display: flex;
+    flex-direction: column;
+    background: {THEME['off_white']};
+    border-right: 3px solid {THEME['gold']};
+    overflow: hidden;
+}}
+
+.pdf-header {{
+    background: linear-gradient(135deg, {THEME['burgundy_light']} 0%, {THEME['burgundy']} 100%);
+    color: {THEME['off_white']};
+    padding: 1.2rem 1.5rem;
+    border-bottom: 1px solid {THEME['gold']};
+}}
+
+.pdf-header-title {{
+    font-family: 'Crimson Text', serif;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+}}
+
+.pdf-header-meta {{
+    font-family: 'Inter', sans-serif;
+    font-size: 0.75rem;
+    color: {THEME['light_gold']};
+}}
+
+.pdf-viewer {{
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+}}
+
+.pdf-viewer iframe {{
+    width: 100%;
+    height: 100%;
+    border: none;
+}}
+
+/* ═════════════════════════════════════════ */
+/* Q&A PANE */
+/* ═════════════════════════════════════════ */
+.qa-pane {{
+    flex: 0 0 52%;
+    display: flex;
+    flex-direction: column;
+    background: {THEME['cream']};
+    overflow: hidden;
+}}
+
+.qa-header {{
+    background: linear-gradient(135deg, {THEME['burgundy']} 0%, {THEME['burgundy_light']} 100%);
+    color: {THEME['off_white']};
+    padding: 1.5rem;
+    border-bottom: 3px solid {THEME['gold']};
+}}
+
+.qa-header-title {{
+    font-family: 'Crimson Text', serif;
+    font-size: 1.3rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+}}
+
+.qa-header-meta {{
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    color: {THEME['light_gold']};
+    opacity: 0.9;
+}}
+
+.qa-filters {{
+    padding: 1rem 1.5rem;
+    background: {THEME['off_white']};
+    border-bottom: 1px solid {THEME['border']};
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}}
+
+.filter-label {{
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: {THEME['gold']};
+}}
+
+.qa-messages {{
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+}}
+
+.message {{
+    animation: slideIn 0.3s ease;
+}}
+
+@keyframes slideIn {{
+    from {{
+        opacity: 0;
+        transform: translateY(10px);
+    }}
+    to {{
+        opacity: 1;
+        transform: translateY(0);
+    }}
+}}
+
+.message-user {{
+    align-self: flex-end;
+    max-width: 85%;
+    background: {THEME['gold']};
+    color: {THEME['burgundy']};
+    padding: 1rem 1.2rem;
+    border-radius: 8px 8px 2px 8px;
+    box-shadow: 0 2px 6px rgba(212, 175, 55, 0.2);
+}}
+
+.message-user-text {{
+    font-family: 'Crimson Text', serif;
+    font-size: 1rem;
+    line-height: 1.6;
+}}
+
+.message-ai {{
+    align-self: flex-start;
+    max-width: 85%;
+    background: {THEME['off_white']};
+    color: {THEME['burgundy']};
+    padding: 1rem 1.2rem;
+    border-radius: 8px 8px 8px 2px;
+    border-left: 4px solid {THEME['gold']};
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}}
+
+.message-ai-text {{
+    font-family: 'Crimson Text', serif;
+    font-size: 0.98rem;
+    line-height: 1.7;
+}}
+
+.message-time {{
+    font-family: 'Inter', sans-serif;
+    font-size: 0.65rem;
+    color: #999;
+    margin-top: 0.4rem;
+}}
+
+.message-evidence {{
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    color: {THEME['gold']};
+    margin-top: 0.6rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid {THEME['border']};
+}}
+
+/* ═════════════════════════════════════════ */
+/* INPUT SECTION */
+/* ═════════════════════════════════════════ */
+.qa-input-section {{
+    padding: 1.5rem;
+    border-top: 2px solid {THEME['light_gold']};
+    background: {THEME['off_white']};
+}}
+
+.suggested-prompts {{
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}}
+
+.prompt-chip {{
+    padding: 0.6rem 1rem;
+    background: {THEME['cream']};
+    color: {THEME['burgundy']};
+    border: 1px solid {THEME['gold']};
+    border-radius: 20px;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}}
+
+.prompt-chip:hover {{
+    background: {THEME['gold']};
+    color: {THEME['burgundy']};
+}}
+
+.qa-input-box {{
+    display: flex;
+    gap: 0.8rem;
+}}
+
+.qa-input {{
+    flex: 1;
+    padding: 0.9rem 1.2rem;
+    border: 2px solid {THEME['light_gold']};
+    border-radius: 6px;
+    font-family: 'Crimson Text', serif;
+    font-size: 0.95rem;
+    color: {THEME['burgundy']};
+    background: {THEME['cream']};
+}}
+
+.qa-input:focus {{
+    outline: none;
+    border-color: {THEME['gold']};
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+}}
+
+.qa-input::placeholder {{
+    color: #999;
+}}
+
+.qa-send-btn {{
+    padding: 0.9rem 1.5rem;
+    background: {THEME['gold']};
+    color: {THEME['burgundy']};
+    border: none;
+    border-radius: 6px;
+    font-family: 'Crimson Text', serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 6px rgba(212, 175, 55, 0.3);
+}}
+
+.qa-send-btn:hover {{
+    background: {THEME['light_gold']};
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(212, 175, 55, 0.4);
+}}
+
+/* ═════════════════════════════════════════ */
+/* LANDING PAGE */
+/* ═════════════════════════════════════════ */
+.landing-container {{
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, {THEME['cream']} 0%, {THEME['off_white']} 100%);
+    padding: 2rem;
+}}
+
+.landing-box {{
+    text-align: center;
+    max-width: 600px;
+}}
+
+.landing-title {{
+    font-family: 'Crimson Text', serif;
+    font-size: 3rem;
+    font-weight: 600;
+    color: {THEME['burgundy']};
+    margin-bottom: 1rem;
+    letter-spacing: -0.02em;
+}}
+
+.landing-subtitle {{
+    font-family: 'Crimson Text', serif;
+    font-size: 1.3rem;
+    color: {THEME['gold']};
+    margin-bottom: 2rem;
+    font-weight: 400;
+}}
+
+.landing-description {{
+    font-size: 1rem;
+    color: {THEME['burgundy']};
+    margin-bottom: 2rem;
+    line-height: 1.8;
+}}
+
+/* ═════════════════════════════════════════ */
+/* SCROLLBAR */
+/* ═════════════════════════════════════════ */
+::-webkit-scrollbar {{
+    width: 8px;
+}}
+
+::-webkit-scrollbar-track {{
+    background: {THEME['cream']};
+}}
+
+::-webkit-scrollbar-thumb {{
+    background: {THEME['light_gold']};
+    border-radius: 4px;
+}}
+
+::-webkit-scrollbar-thumb:hover {{
+    background: {THEME['gold']};
+}}
+
+</style>
+""", unsafe_allow_html=True)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SIDEBAR WITH DOCUMENT MANAGEMENT
+# ═══════════════════════════════════════════════════════════════════════════════
 with st.sidebar:
-    st.markdown('<div class="sb-brand">Scriptorium</div>', unsafe_allow_html=True)
+    st.markdown(f"""
+    <div class="sidebar-header">
+        📚 Your Documents
+    </div>
+    """, unsafe_allow_html=True)
 
-    st.markdown('<div class="sb-section">Papers</div>', unsafe_allow_html=True)
+    # Document Upload
+    st.markdown(f"""
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">Upload New</div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    uploaded_file = st.file_uploader("Choose PDF", type=["pdf"], label_visibility="collapsed")
 
-    if st.button("+ New session", key="new_session"):
-        for k in ["answers","chain","doc_name","doc_stats","pdf_b64","q_count","pending_q","thinking","last_q"]:
-            st.session_state[k] = [] if k in ["answers","sessions"] else None if k not in ["q_count"] else 0
-        st.session_state.thinking = False
-        st.rerun()
+    # Document List
+    st.markdown(f"""
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">Recent Documents</div>
+    </div>
+    """, unsafe_allow_html=True)
 
     if st.session_state.doc_name:
-        ext = st.session_state.doc_name.split(".")[-1].upper()[:3]
-        short = st.session_state.doc_name[:22] + "…" if len(st.session_state.doc_name) > 22 else st.session_state.doc_name
-        pages = st.session_state.doc_stats["pages"] if st.session_state.doc_stats else "—"
         st.markdown(f"""
-        <div class="sb-file-item active">
-            <div class="sb-file-icon">{ext}</div>
-            <div>
-                <div class="sb-file-name">{short}</div>
-                <div class="sb-file-meta">{pages} pages</div>
+        <div class="document-item">
+            <div class="document-item-name">📄 {st.session_state.doc_name[:25]}...</div>
+            <div class="document-item-meta">
+                {st.session_state.doc_stats.get('pages', 0)} pages • {st.session_state.doc_stats.get('words', 0) // 1000}k words
             </div>
         </div>
         """, unsafe_allow_html=True)
-    else:
-        st.markdown("""
-        <div style="font-size:.72rem;color:#272F3E;font-family:'JetBrains Mono',monospace;
-                    padding:8px 10px;letter-spacing:.04em">
-            No papers loaded
-        </div>
-        """, unsafe_allow_html=True)
 
-    used = st.session_state.q_count
-    pct  = int((used / MAX_Q) * 100)
+    # Settings Section
     st.markdown(f"""
-    <div class="sb-usage">
-        <div class="sb-usage-row">
-            <span class="sb-usage-label">Session</span>
-            <span class="sb-usage-count">{used} / {MAX_Q}</span>
-        </div>
-        <div class="sb-track">
-            <div class="sb-fill" style="width:{pct}%"></div>
-        </div>
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">Settings</div>
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("""
-    <div class="sb-about">
-        Ashlesha Sharma<br>
-        Miranda House · DU<br>
-        <a href="https://github.com/ashlesha-sharma/cheminsight-ai">github</a>
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🌙 Dark Mode" if not st.session_state.dark_mode else "☀️ Light Mode"):
+            st.session_state.dark_mode = not st.session_state.dark_mode
+            st.rerun()
+
+    with col2:
+        if st.button("🔄 New Session"):
+            st.session_state.answers = []
+            st.session_state.chain = None
+            st.session_state.doc_name = None
+            st.rerun()
+
+    # Info Section
+    st.markdown(f"""
+    <div class="sidebar-section">
+        <div class="sidebar-section-title">About</div>
+        <p style="font-size: 0.8rem; color: {THEME['burgundy']}; margin-top: 0.8rem;">
+            <strong>Scriptorium</strong> is an AI research assistant that helps you analyze documents 
+            with precision using RAG technology.
+        </p>
+        <p style="font-size: 0.75rem; color: {THEME['gold']}; margin-top: 0.8rem;">
+            Built with ❤️ by <strong>Ashlesha Sharma</strong>
+        </p>
     </div>
     """, unsafe_allow_html=True)
 
-
-# ── API key guard ──────────────────────────────────────────────────────────────
-if not os.getenv("OPENAI_API_KEY"):
-    st.error("No API key found. Add OPENAI_API_KEY to Streamlit secrets.")
-    st.stop()
-
-
-# ── core functions ─────────────────────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════════
+# HELPER FUNCTIONS
+# ═══════════════════════════════════════════════════════════════════════════════
 @st.cache_resource(show_spinner=False)
 def build_chain(_pdf_bytes: bytes, filename: str):
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
@@ -575,7 +662,7 @@ def build_chain(_pdf_bytes: bytes, filename: str):
         tmp_path = tmp.name
 
     loader = PyPDFLoader(tmp_path)
-    pages  = loader.load()
+    pages = loader.load()
     os.unlink(tmp_path)
 
     total = " ".join(p.page_content for p in pages).strip()
@@ -588,7 +675,7 @@ def build_chain(_pdf_bytes: bytes, filename: str):
     )
     chunks = splitter.split_documents(pages)
 
-    embeddings  = OpenAIEmbeddings(model=EMBED_MODEL)
+    embeddings = OpenAIEmbeddings(model=EMBED_MODEL)
     vectorstore = Chroma.from_documents(
         documents=chunks, embedding=embeddings,
         persist_directory=f"./chroma_{filename[:14].replace('.','_')}",
@@ -602,37 +689,28 @@ def build_chain(_pdf_bytes: bytes, filename: str):
     )
     prompt = PromptTemplate(
         input_variables=["context", "question"],
-        template="""You are Scriptorium — a precise, scholarly research assistant for any academic discipline.
-
-Rules:
-- Answer ONLY from the context. If absent: state clearly it is not in the paper.
-- Quote exact values, statistics, names where present.
-- Structure: (1) direct answer, (2) key points if applicable, (3) evidence quote.
+        template="""You are Scriptorium, a scholarly research assistant. Answer precisely from the context provided.
 
 Context:
-──────────────────────
 {context}
-──────────────────────
 
 Question: {question}
 
 Answer:""",
     )
-    llm   = ChatOpenAI(model_name=MODEL, temperature=0.1)
+    llm = ChatOpenAI(model_name=MODEL, temperature=0.1)
     chain = ConversationalRetrievalChain.from_llm(
         llm=llm, retriever=retriever, memory=memory,
         return_source_documents=True,
         combine_docs_chain_kwargs={"prompt": prompt},
     )
     stats = {
-        "pages":        len(pages),
-        "chunks":       len(chunks),
-        "words":        len(total.split()),
-        "read_min":     max(1, len(total.split()) // 250),
+        "pages": len(pages),
+        "chunks": len(chunks),
+        "words": len(total.split()),
         "page_lengths": [len(p.page_content) for p in pages],
     }
     return chain, stats
-
 
 def get_sources(source_docs):
     out, seen = [], set()
@@ -640,322 +718,190 @@ def get_sources(source_docs):
         page = doc.metadata.get("page", 0)
         if page not in seen:
             seen.add(page)
-            snippet = doc.page_content[:200].replace("\n", " ").strip()
+            snippet = doc.page_content[:150].replace("\n", " ").strip()
             out.append({"page": page + 1, "snippet": snippet})
     return out
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# API KEY GUARD
+# ═══════════════════════════════════════════════════════════════════════════════
+if not os.getenv("OPENAI_API_KEY"):
+    st.error("❌ No API key found. Add OPENAI_API_KEY to Streamlit secrets.")
+    st.stop()
 
-def parse_answer(raw):
-    lines = raw.strip().split("\n")
-    direct, points, evidence = [], [], []
-    mode = "direct"
-    for line in lines:
-        s = line.strip()
-        if not s: continue
-        low = s.lower()
-        if any(k in low for k in ["key point","key finding","important point","notable"]):
-            mode = "points"; continue
-        if any(k in low for k in ["evidence","quote","from the paper","the paper state"]):
-            mode = "evidence"; continue
-        if s.startswith(("•", "-", "*", "–")):
-            points.append(s.lstrip("•-*– ")); mode = "points"
-        elif s.startswith(('"', "'")):
-            evidence.append(s.strip("\"'"))
-        else:
-            if mode == "direct": direct.append(s)
-            elif mode == "points": points.append(s)
-            elif mode == "evidence": evidence.append(s)
-    return {
-        "direct":   " ".join(direct) if direct else raw.strip(),
-        "points":   points[:6],
-        "evidence": evidence[:1],
-    }
+# ═════════════════════════════════════���═════════════════════════════════════════
+# TOP BRAND BAR WITH SEARCH & THEME TOGGLE
+# ═══════════════════════════════════════════════════════════════════════════════
+col_brand_left, col_brand_right = st.columns([2, 1])
 
-
-def density_chart(page_lengths):
-    avg    = sum(page_lengths) / len(page_lengths)
-    colors = ["#8A6E3C" if l >= avg else "#1A2030" for l in page_lengths]
-    fig    = go.Figure(go.Bar(
-        x=list(range(1, len(page_lengths) + 1)),
-        y=page_lengths,
-        marker_color=colors,
-        marker_line_width=0,
-        hovertemplate="pg %{x} · %{y}<extra></extra>",
-    ))
-    fig.update_layout(
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="JetBrains Mono", color="#272F3E", size=9),
-        margin=dict(l=6, r=6, t=10, b=20),
-        height=110,
-        xaxis=dict(showgrid=False, zeroline=False,
-                   title="", tickfont_size=8, color="#272F3E",
-                   linecolor="#1A2030"),
-        yaxis=dict(showgrid=True, gridcolor="#131720",
-                   zeroline=False, tickfont_size=8, color="#272F3E",
-                   showticklabels=False),
-        bargap=0.3,
-    )
-    return fig
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# LANDING STATE — before upload
-# ══════════════════════════════════════════════════════════════════════════════
-if st.session_state.chain is None:
-
-    st.markdown('<div class="landing-wrap">', unsafe_allow_html=True)
-
-    now_h = datetime.datetime.now().hour
-    greeting = "Good morning" if now_h < 12 else "Good afternoon" if now_h < 17 else "Good evening"
-
+with col_brand_left:
     st.markdown(f"""
-    <div class="landing-greeting">{greeting}.</div>
-    <div class="landing-sub">What would you like to research today?</div>
+    <div class="brand-bar" style="border-right: none;">
+        <div class="brand-left">
+            <div>
+                <div class="brand-title">📖 Scriptorium</div>
+                <div class="brand-subtitle">Research Intelligence</div>
+            </div>
+        </div>
+    </div>
     """, unsafe_allow_html=True)
 
-    col_c = st.columns([1, 2, 1])[1]
-    with col_c:
-        st.markdown('<div class="upload-card">', unsafe_allow_html=True)
-        st.markdown("""
-        <div class="upload-card-title">Upload a paper to begin</div>
-        <div class="upload-card-sub">
-            Research paper &nbsp;·&nbsp; Thesis chapter &nbsp;·&nbsp; Report &nbsp;·&nbsp; Any PDF
-        </div>
-        """, unsafe_allow_html=True)
-
-        uploaded = st.file_uploader(
-            "Upload PDF",
-            type=["pdf"],
-            label_visibility="collapsed",
-        )
-        st.markdown('</div>', unsafe_allow_html=True)
-
-        st.markdown("""
-        <div class="landing-note">
-            Chemistry &nbsp;·&nbsp; Economics &nbsp;·&nbsp; Law &nbsp;·&nbsp; Medicine &nbsp;·&nbsp; History &nbsp;·&nbsp; Any discipline
-        </div>
-        """, unsafe_allow_html=True)
-
-    if uploaded:
-        bar = st.progress(0, text="Reading document...")
-        time.sleep(0.15)
-        bar.progress(30, text="Splitting into passages...")
-        time.sleep(0.1)
-        bar.progress(55, text="Building index — ~20s...")
-        try:
-            pdf_bytes = uploaded.read()
-            chain, stats = build_chain(pdf_bytes, uploaded.name)
-            bar.progress(95, text="Finalising...")
-            time.sleep(0.3)
-            bar.progress(100, text="Ready.")
-            time.sleep(0.4)
-            bar.empty()
-            st.session_state.chain    = chain
-            st.session_state.doc_name = uploaded.name
-            st.session_state.doc_stats = stats
-            st.session_state.pdf_b64  = base64.b64encode(pdf_bytes).decode("utf-8")
-            st.rerun()
-        except ValueError as e:
-            bar.empty()
-            if "SCANNED_PDF" in str(e):
-                st.error("Scanned PDF — no selectable text found. Try a PDF where text can be highlighted.")
-            else:
-                st.error(f"Error: {e}")
-        except Exception as e:
-            bar.empty()
-            err = str(e).lower()
-            if "api" in err or "key" in err or "auth" in err:
-                st.error("API key error. Verify your key in Streamlit secrets.")
-            elif "rate" in err:
-                st.error("Rate limit reached. Wait 60 seconds and try again.")
-            else:
-                st.error(f"Unexpected error: {e}")
-
-    st.markdown('</div>', unsafe_allow_html=True)
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# WORKSPACE STATE — after upload
-# ══════════════════════════════════════════════════════════════════════════════
-else:
-    st.markdown('<div class="workspace">', unsafe_allow_html=True)
-
-    doc_col, qa_col = st.columns([1, 1.1], gap="large")
-
-    # ── LEFT: document ─────────────────────────────────────────────────────────
-    with doc_col:
-        s  = st.session_state.doc_stats
-        dn = st.session_state.doc_name
-
-        st.markdown('<div class="pane-label">Document</div>', unsafe_allow_html=True)
-
-        st.markdown(f"""
-        <div class="stat-row">
-            <div class="stat-card">
-                <div class="stat-n">{s['pages']}</div>
-                <div class="stat-l">Pages</div>
+# ═══════════════════════════════════════════════════════════════════════════════
+# LANDING PAGE
+# ═══════════════════════════════════════════════════════════════════════════════
+if st.session_state.chain is None:
+    st.markdown("""
+    <div class="landing-container">
+        <div class="landing-box">
+            <div class="landing-title">Scriptorium</div>
+            <div class="landing-subtitle">Research Intelligence for Any Subject</div>
+            <div class="landing-description">
+                Upload any research paper, thesis, or document and ask questions in natural language.
+                Receive precise answers grounded in your document, with citations.
             </div>
-            <div class="stat-card">
-                <div class="stat-n">{s['chunks']}</div>
-                <div class="stat-l">Passages</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-n">{s['read_min']}m</div>
-                <div class="stat-l">Read time</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-n">{s['words']//1000}k</div>
-                <div class="stat-l">Words</div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
-        if len(s["page_lengths"]) > 1:
-            st.plotly_chart(
-                density_chart(s["page_lengths"]),
-                use_container_width=True,
-                config={"displayModeBar": False},
-            )
-
-        short = dn[:36] + "…" if len(dn) > 36 else dn
-        st.markdown(f"""
-        <div class="pdf-bar">
-            <span class="pdf-bar-name">{short}</span>
-            <span>{s['pages']} pages</span>
-        </div>
-        <div class="pdf-frame-wrap">
-            <iframe
-                src="data:application/pdf;base64,{st.session_state.pdf_b64}"
-                width="100%" height="440px"
-                style="border:none;display:block;background:#0C0F14"
-            ></iframe>
-        </div>
-        """, unsafe_allow_html=True)
-
-    # ── RIGHT: Q&A ─────────────────────────────────────────────────────────────
-    with qa_col:
-        remaining = MAX_Q - st.session_state.q_count
-        st.markdown(f"""
-        <div class="qa-title-row">
-            <div class="qa-title">Ask your questions</div>
-            <div class="qa-count"><strong>{remaining}</strong> / {MAX_Q} remaining</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        if st.session_state.q_count < MAX_Q:
-            user_input = st.chat_input("Ask anything about the paper...")
-
-            st.markdown('<div class="pane-label" style="margin-top:.6rem">Suggested</div>', unsafe_allow_html=True)
-            for p in [
-                "Summarise this paper",
-                "What are the key findings?",
-                "What methodology is used?",
-                "What limitations are mentioned?",
-                "What does the paper conclude?",
-            ]:
-                if st.button(p, key=f"p_{p}"):
-                    st.session_state.pending_q = p
-                    st.rerun()
-
-        if not st.session_state.answers:
-            st.markdown("""
-            <div class="empty-qa">
-                <div class="empty-qa-title">Ready when you are</div>
-                <div class="empty-qa-sub">Ask about findings, methods, arguments, data</div>
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col2:
+        if uploaded_file:
+            try:
+                pdf_bytes = uploaded_file.read()
+                chain, stats = build_chain(pdf_bytes, uploaded_file.name)
+                st.session_state.chain = chain
+                st.session_state.doc_name = uploaded_file.name
+                st.session_state.doc_stats = stats
+                st.session_state.pdf_b64 = base64.b64encode(pdf_bytes).decode("utf-8")
+                st.rerun()
+            except Exception as e:
+                st.error(f"❌ Error: {str(e)}")
+        else:
+            st.markdown(f"""
+            <div style="text-align: center; padding: 2rem;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">📄</div>
+                <div style="font-family: 'Crimson Text', serif; font-size: 1.1rem; color: {THEME['burgundy']}; margin-bottom: 1rem;">
+                    Drop your PDF here or click to browse
+                </div>
             </div>
             """, unsafe_allow_html=True)
+
+    st.markdown("</div></div>", unsafe_allow_html=True)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# WORKSPACE - SPLIT SCREEN
+# ═══════════════════════════════════════════════════════════════════════════════
+else:
+    col_pdf, col_qa = st.columns([0.48, 0.52])
+
+    # LEFT PANE: PDF
+    with col_pdf:
+        st.markdown(f"""
+        <div class="pdf-pane" style="height: calc(100vh - 100px);">
+            <div class="pdf-header">
+                <div class="pdf-header-title">Document</div>
+                <div class="pdf-header-meta">
+                    Pages: {st.session_state.doc_stats["pages"]} • Words: {st.session_state.doc_stats["words"]//1000}k
+                </div>
+            </div>
+            <div class="pdf-viewer">
+                <iframe src="data:application/pdf;base64,{st.session_state.pdf_b64}" style="width:100%; height:100%; border:none;"></iframe>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # RIGHT PANE: Q&A
+    with col_qa:
+        st.markdown(f"""
+        <div class="qa-pane" style="height: calc(100vh - 100px);">
+            <div class="qa-header">
+                <div class="qa-header-title">Ask Your Questions</div>
+                <div class="qa-header-meta">{st.session_state.q_count} / {MAX_Q} questions used</div>
+            </div>
+            
+            <div class="qa-filters">
+                <div class="filter-label">🔍 Filter Results:</div>
+        """, unsafe_allow_html=True)
+
+        # Filter Section
+        filter_cols = st.columns(2)
+        with filter_cols[0]:
+            relevance = st.slider("Relevance", 0.0, 1.0, 0.5, step=0.1)
+        
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        # Messages Display
+        st.markdown(f"""
+        <div class="qa-messages">
+        """, unsafe_allow_html=True)
 
         for item in st.session_state.answers:
-            if item.get("error"):
-                st.error(item["content"])
-                continue
-            parsed = parse_answer(item["content"])
-            pts_html = ""
-            if parsed["points"]:
-                lis = "".join(f"<li>{pt}</li>" for pt in parsed["points"])
-                pts_html = f'<div class="a-sec">Key points</div><ul class="a-pts">{lis}</ul>'
-            ev_html = ""
-            if item.get("sources"):
-                src = item["sources"][0]
-                ev_html = f"""
-                <div class="a-sec">Evidence</div>
-                <div class="evidence">
-                    <div class="evidence-text">"{src['snippet']}…"</div>
-                    <div class="evidence-ref">Page {src['page']}</div>
-                </div>"""
+            if not item.get("error"):
+                st.markdown(f"""
+                <div class="message message-user">
+                    <div class="message-user-text">{item['question']}</div>
+                    <div class="message-time">{item.get('time', '')}</div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                st.markdown(f"""
+                <div class="message message-ai">
+                    <div class="message-ai-text">{item['content'][:500]}</div>
+                    <div class="message-evidence">📌 Source: Page {item.get('sources', [{'page': '?'}])[0]['page']}</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        # Input Section
+        if st.session_state.q_count < MAX_Q:
             st.markdown(f"""
-            <div class="a-card">
-                <div class="a-q">{item['question']}</div>
-                <div class="a-sec">Answer</div>
-                <div class="a-body">{parsed['direct']}</div>
-                {pts_html}{ev_html}
-                <div class="a-time">{item.get('time','')}</div>
-            </div>
+            <div class="qa-input-section">
+                <div class="suggested-prompts">
             """, unsafe_allow_html=True)
 
-        if st.session_state.thinking:
-            st.markdown("""
-            <div class="thinking">
-                <div class="t-dot"></div>
-                <div class="t-text">Analysing document</div>
-            </div>
-            """, unsafe_allow_html=True)
+            prompts = [
+                "📌 Summarize",
+                "🔑 Key findings",
+                "🔬 Methodology",
+                "⚠️ Limitations",
+                "📝 Conclusion"
+            ]
 
-        question = st.session_state.pending_q or (user_input if st.session_state.q_count < MAX_Q else None)
+            for prompt in prompts:
+                if st.button(prompt, key=f"p_{prompt}"):
+                    st.session_state.pending_q = prompt
+                    st.session_state.thinking = True
+                    st.session_state.q_count += 1
+                    st.rerun()
 
-        if question and not st.session_state.thinking and st.session_state.q_count < MAX_Q:
-            st.session_state.pending_q = None
-            st.session_state.last_q    = question
-            st.session_state.thinking  = True
-            st.session_state.q_count  += 1
-            st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
 
-        if st.session_state.thinking and st.session_state.last_q:
-            q = st.session_state.last_q
-            try:
-                result  = st.session_state.chain.invoke({"question": q})
-                sources = get_sources(result.get("source_documents", []))
-                st.session_state.answers.append({
-                    "question": q,
-                    "content":  result["answer"],
-                    "sources":  sources,
-                    "time":     datetime.datetime.now().strftime("%H:%M"),
-                    "error":    False,
-                })
-            except Exception as e:
-                err = str(e).lower()
-                msg = ("Rate limit — wait 60 seconds." if "rate" in err
-                       else "API key error — verify Streamlit secrets." if "api" in err or "key" in err
-                       else f"Error: {e}")
-                st.session_state.answers.append({"error": True, "content": msg})
-            finally:
-                st.session_state.thinking = False
-                st.session_state.last_q   = None
+            user_input = st.text_input("Ask me anything...", key="qa_input", placeholder="What would you like to know?")
+
+            if user_input:
+                st.session_state.pending_q = user_input
+                st.session_state.thinking = True
+                st.session_state.q_count += 1
                 st.rerun()
 
-        if st.session_state.q_count >= MAX_Q:
-            st.markdown("""
-            <div class="limit-wall">
-                <div style="font-family:'Playfair Display',serif;font-size:.95rem;
-                            color:#4E5768;margin-bottom:.3rem;font-weight:400">
-                    Session limit reached
-                </div>
-                <div style="font-size:.72rem;color:#272F3E;
-                            font-family:'JetBrains Mono',monospace;letter-spacing:.04em">
-                    10 / 10 questions used · refresh to begin a new session
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            if st.session_state.thinking and st.session_state.pending_q:
+                try:
+                    result = st.session_state.chain.invoke({"question": st.session_state.pending_q})
+                    sources = get_sources(result.get("source_documents", []))
+                    st.session_state.answers.append({
+                        "question": st.session_state.pending_q,
+                        "content": result["answer"],
+                        "sources": sources,
+                        "time": datetime.datetime.now().strftime("%H:%M"),
+                        "error": False,
+                    })
+                except Exception as e:
+                    st.session_state.answers.append({
+                        "error": True,
+                        "content": f"Error: {str(e)}"
+                    })
+                finally:
+                    st.session_state.thinking = False
+                    st.session_state.pending_q = None
+                    st.rerun()
 
-        if st.session_state.answers:
-            st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
-            if st.button("Clear answers", key="clear_btn"):
-                st.session_state.answers  = []
-                st.session_state.thinking = False
-                st.session_state.last_q   = None
-                if st.session_state.chain:
-                    st.session_state.chain.memory.clear()
-                st.rerun()
-
-    st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
