@@ -1,11 +1,11 @@
 streamlit==1.35.0
-langchain==0.2.6
-langchain-openai==0.1.13
-langchain-community==0.2.6
-openai==1.35.3
+langchain==0.3.7
+langchain-openai==0.2.14
+langchain-community==0.3.7
+openai==1.55.0
 pypdf==4.2.0
-chromadb==0.5.3
-tiktoken==0.7.0
+chromadb==0.5.23
+tiktoken==0.8.0
 python-dotenv==1.0.1
 plotly==5.22.0
 pillow==10.3.0
