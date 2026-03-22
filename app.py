@@ -34,7 +34,7 @@ st.markdown("""
 header, footer, #MainMenu { visibility: hidden; }
 
 /* Typography */
-h1, h2, h3, div, p, span { font-family: 'Inter', sans-serif !important; }
+h1, h2, h3, div, p, span { font-family: 'EB Garamound', Inter !important; }
 
 /* Sidebar - Gemini Style */
 section[data-testid="stSidebar"] { 
